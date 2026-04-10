@@ -9,7 +9,9 @@ const connectionString = process.env.POSTGRES_URL_NON_POOLING || process.env.POS
 
 const pool = new Pool({
   connectionString,
-  ssl: { rejectUnauthorized: false },
+  ssl: process.env.POSTGRES_URL_NON_POOLING?.includes('supabase')
+    ? { rejectUnauthorized: false, checkServerIdentity: () => undefined }
+    : { rejectUnauthorized: false },
   max: 1, // Serverless: máximo 1 conexión por función
 });
 
