@@ -3,21 +3,18 @@ import pg from 'pg';
 
 const { Pool } = pg;
 
-// Supabase requiere la URL sin pooling para queries directas
-// Vercel inyecta POSTGRES_URL_NON_POOLING automáticamente
+// Supabase free tier tiene problemas de certificado SSL
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+
 const connectionString = process.env.POSTGRES_URL_NON_POOLING || process.env.POSTGRES_URL;
 
 const pool = new Pool({
   connectionString,
-  ssl: process.env.POSTGRES_URL_NON_POOLING?.includes('supabase')
-    ? { rejectUnauthorized: false, checkServerIdentity: () => undefined }
-    : { rejectUnauthorized: false },
-  max: 1, // Serverless: máximo 1 conexión por función
+  ssl: false,
+  max: 1,
 });
 
-// Wrapper que imita la API de @vercel/postgres (template literals)
 export const sql = async (strings, ...values) => {
-  // Armar query con $1, $2... en lugar de interpolación directa
   let text = '';
   strings.forEach((str, i) => {
     text += str;
