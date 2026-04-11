@@ -1,20 +1,24 @@
 import { useState, useEffect } from 'react'
 import Sidebar from '../components/Sidebar'
-import { getProfile, teacherAPI, STATUS_LABELS, STATUS_BADGE } from '../utils/auth'
-import { LayoutDashboard, Users, Award, BookOpen, X, Plus, Check, Search } from 'lucide-react'
+import ProfileEditor from '../components/ProfileEditor'
+import { getProfile, getUser, teacherAPI, adminAPI, profileAPI, setProfile, STATUS_LABELS, STATUS_BADGE } from '../utils/auth'
+import { LayoutDashboard, Users, Award, BookOpen, X, Plus, Check, User, GraduationCap, CheckCircle } from 'lucide-react'
 
-const SKILLS = ['Trabajo en equipo', 'Liderazgo', 'Comunicación oral', 'Comunicación escrita', 'Resolución de problemas', 'Responsabilidad', 'Proactividad', 'Capacidad analítica', 'Creatividad', 'Puntualidad', 'Adaptabilidad']
+const SKILLS = ['Trabajo en equipo','Liderazgo','Comunicación oral','Comunicación escrita','Resolución de problemas','Responsabilidad','Proactividad','Capacidad analítica','Creatividad','Puntualidad','Adaptabilidad']
+const ORIENTATIONS = ['Comunicación','Arte','Economía','Informática','Ciencias Naturales','Ciencias Sociales','Humanidades','Técnica General','Eléctrica','Electrónica','Mecánica','Construcciones','Química']
+const GRADES = ['1er año','2do año','3er año','4to año','5to año','6to año','7mo año']
 
 export default function TeacherDashboard() {
   const [tab, setTab] = useState('inicio')
   const [students, setStudents] = useState([])
-  const [teacher, setTeacher] = useState(null)
-  const [loading, setLoading] = useState(false)
-  const [modal, setModal] = useState(null)
+  const [logbook, setLogbook]   = useState([])
+  const [loading, setLoading]   = useState(false)
+  const [modal, setModal]       = useState(null)
   const [selected, setSelected] = useState(null)
-  const [form, setForm] = useState({})
-  const [msg, setMsg] = useState('')
-  const [search, setSearch] = useState('')
+  const [form, setForm]         = useState({})
+  const [msg, setMsg]           = useState('')
+  const [profileData, setProfileData] = useState(null)
+  const user    = getUser()
   const profile = getProfile()
 
   useEffect(() => { loadData() }, [])
@@ -22,219 +26,221 @@ export default function TeacherDashboard() {
   async function loadData() {
     setLoading(true)
     try {
-      const data = await teacherAPI.getStudents()
-      setStudents(data.students || [])
-      setTeacher(data.teacher || null)
-    } catch (e) {
-      // API not available in demo — use mock
-      setStudents([])
+      const [sd, pd] = await Promise.allSettled([teacherAPI.getStudents(), profileAPI.get()])
+      if (sd.status === 'fulfilled') setStudents(sd.value.students || [])
+      if (pd.status === 'fulfilled') { setProfileData(pd.value.profile); setProfile(pd.value.profile) }
     } finally { setLoading(false) }
+  }
+
+  async function createStudent() {
+    try {
+      await adminAPI.createUser({ ...form, role:'student', school_id: profileData?.school_id })
+      setMsg('✅ Alumno creado correctamente'); setModal(null); setForm({})
+      loadData()
+    } catch(e) { setMsg(e.message) }
   }
 
   async function validateSkill() {
     try {
       await teacherAPI.validateSkill({ student_id: selected.id, skill: form.skill, note: form.note })
-      setMsg(`Habilidad "${form.skill}" validada para ${selected.full_name}`)
-      setModal(null); setForm({})
-      loadData()
-    } catch (e) { setMsg(e.message) }
+      setMsg(`✅ Habilidad "${form.skill}" validada`); setModal(null); setForm({})
+    } catch(e) { setMsg(e.message) }
   }
 
-  const filtered = students.filter(s =>
-    !search || s.full_name?.toLowerCase().includes(search.toLowerCase()) ||
-    s.orientation?.toLowerCase().includes(search.toLowerCase())
-  )
-
-  const totalApps = students.reduce((acc, s) => acc + Number(s.application_count || 0), 0)
-  const totalPortfolio = students.reduce((acc, s) => acc + Number(s.portfolio_count || 0), 0)
+  const pendingLogbook = logbook.filter(e => !e.approved_by_teacher).length
 
   const navItems = [
-    { id: 'inicio', label: 'Panel general', icon: <LayoutDashboard size={16} /> },
-    { id: 'alumnos', label: 'Mis alumnos', icon: <Users size={16} />, count: students.length },
-    { id: 'validaciones', label: 'Validar habilidades', icon: <Award size={16} /> },
+    { id:'inicio',      label:'Panel general',    icon:<LayoutDashboard size={16}/> },
+    { id:'alumnos',     label:'Mis alumnos',       icon:<Users size={16}/>, count:students.length },
+    { id:'validaciones',label:'Validar habilidades',icon:<Award size={16}/> },
+    { id:'perfil',      label:'Mi perfil',          icon:<User size={16}/> },
   ]
 
   return (
     <div className="dashboard-layout">
       <Sidebar items={navItems} active={tab} onSelect={setTab} accentColor="var(--teal)" />
-
       <main className="dashboard-main">
-        {msg && <div className={`alert ${msg.includes('validada') ? 'alert-success' : 'alert-error'}`} style={{ marginBottom: 20 }} onClick={() => setMsg('')}>{msg} <X size={14} style={{ marginLeft: 'auto', cursor: 'pointer' }} /></div>}
+        {msg && <div className={`alert ${msg.startsWith('✅')?'alert-success':'alert-error'}`} style={{marginBottom:20}} onClick={()=>setMsg('')}>{msg}<X size={14} style={{marginLeft:'auto',cursor:'pointer'}}/></div>}
 
-        {/* ── INICIO ── */}
-        {tab === 'inicio' && (
-          <div style={{ animation: 'fadeUp 0.4s ease' }}>
+        {/* INICIO */}
+        {tab==='inicio' && (
+          <div style={{animation:'fadeUp 0.4s ease'}}>
             <div className="dashboard-header">
-              <h2>Bienvenido/a, {profile?.full_name?.split(' ').slice(-1)[0] || 'Docente'}</h2>
-              <p>{profile?.school} · {profile?.subject}</p>
+              <h2>{profileData?.full_name || profile?.full_name || 'Docente'}</h2>
+              <p>{profileData?.school||profileData?.school_name} {profileData?.subject ? `· ${profileData.subject}` : ''}</p>
             </div>
-
-            <div className="grid-4" style={{ marginBottom: 36 }}>
+            <div className="grid-4" style={{marginBottom:32}}>
               {[
-                { val: students.length, label: 'Alumnos en tu escuela', color: 'var(--teal)' },
-                { val: totalApps, label: 'Postulaciones activas', color: 'var(--gold)' },
-                { val: totalPortfolio, label: 'Proyectos en portafolio', color: 'var(--wine-light)' },
-                { val: students.reduce((a, s) => a + (s.validations?.length || 0), 0), label: 'Habilidades validadas', color: 'var(--muted)' },
-              ].map(s => (
+                {val:students.length,       label:'Alumnos tutorados', color:'var(--teal)',       icon:<Users size={18}/>},
+                {val:students.filter(s=>Number(s.application_count||0)>0).length, label:'Con postulaciones', color:'var(--wine-light)', icon:<GraduationCap size={18}/>},
+                {val:students.reduce((a,s)=>a+Number(s.skill_count||0),0), label:'Habilidades validadas', color:'var(--gold)', icon:<Award size={18}/>},
+                {val:students.reduce((a,s)=>a+Number(s.portfolio_count||0),0), label:'Items en portafolio', color:'var(--muted)', icon:<BookOpen size={18}/>},
+              ].map(s=>(
                 <div key={s.label} className="stat-card">
-                  <div className="stat-value" style={{ color: s.color }}>{s.val}</div>
+                  <div style={{color:s.color}}>{s.icon}</div>
+                  <div className="stat-value" style={{color:s.color}}>{s.val}</div>
                   <div className="stat-label">{s.label}</div>
                 </div>
               ))}
             </div>
-
-            <h3 style={{ marginBottom: 16, color: 'var(--cream)' }}>Resumen de tu grupo</h3>
-            {students.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: 60, color: 'var(--smoke)', background: 'var(--bg-card)', borderRadius: 'var(--r-lg)', border: '1px solid rgba(255,255,255,0.06)' }}>
-                <Users size={40} style={{ opacity: 0.3, marginBottom: 12 }} />
-                <p>Los alumnos de tu escuela aparecerán aquí cuando se registren en la plataforma.</p>
-              </div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {students.slice(0, 5).map(s => (
-                  <StudentRow key={s.id} s={s} onValidate={() => { setSelected(s); setModal('validate'); setTab('validaciones') }} />
-                ))}
-                {students.length > 5 && (
-                  <button className="btn btn-outline btn-sm" onClick={() => setTab('alumnos')} style={{ alignSelf: 'flex-start' }}>Ver todos ({students.length})</button>
-                )}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* ── ALUMNOS ── */}
-        {tab === 'alumnos' && (
-          <div style={{ animation: 'fadeUp 0.4s ease' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-              <div><h2>Mis alumnos</h2><p>Alumnos registrados de {profile?.school || 'tu escuela'}</p></div>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
+              <h3 style={{color:'var(--cream)'}}>Alumnos recientes</h3>
+              <button className="btn btn-primary btn-sm" onClick={()=>{setForm({});setModal('student')}}><Plus size={16}/> Nuevo alumno</button>
             </div>
-
-            <div style={{ position: 'relative', marginBottom: 20 }}>
-              <Search size={16} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'var(--smoke)' }} />
-              <input className="input" placeholder="Buscar por nombre u orientación..." value={search} onChange={e => setSearch(e.target.value)} style={{ paddingLeft: 40 }} />
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {filtered.map(s => (
-                <StudentRow key={s.id} s={s} expanded onValidate={() => { setSelected(s); setModal('validate') }} />
-              ))}
-              {!filtered.length && (
-                <div style={{ textAlign: 'center', padding: 60, color: 'var(--smoke)' }}>
-                  <Users size={40} style={{ opacity: 0.3, marginBottom: 12 }} />
-                  <p>{search ? 'No se encontraron alumnos con ese criterio.' : 'No hay alumnos registrados de tu escuela aún.'}</p>
+            <div style={{display:'flex',flexDirection:'column',gap:10}}>
+              {students.slice(0,5).map(s=>(
+                <div key={s.id} className="card" style={{display:'flex',alignItems:'center',gap:12,padding:'12px 16px'}}>
+                  {s.avatar_url
+                    ? <img src={s.avatar_url} style={{width:36,height:36,borderRadius:'50%',objectFit:'cover',flexShrink:0}}/>
+                    : <div style={{width:36,height:36,borderRadius:'50%',background:'rgba(27,186,170,0.2)',display:'flex',alignItems:'center',justifyContent:'center',color:'var(--teal)',fontWeight:700,flexShrink:0}}>{s.full_name?.charAt(0)||'A'}</div>
+                  }
+                  <div style={{flex:1}}>
+                    <div style={{color:'var(--cream)',fontWeight:600,fontSize:'0.95rem'}}>{s.full_name}</div>
+                    <div style={{fontSize:'0.78rem',color:'var(--smoke)'}}>{s.orientation} · {s.grade}</div>
+                  </div>
+                  <div style={{display:'flex',gap:6,flexShrink:0}}>
+                    {Number(s.portfolio_count||0)>0 && <span className="badge badge-smoke">{s.portfolio_count} proyectos</span>}
+                    {Number(s.application_count||0)>0 && <span className="badge badge-wine">{s.application_count} postulac.</span>}
+                    <button className="btn btn-outline btn-sm" onClick={()=>{setSelected(s);setModal('validate')}}>Validar</button>
+                  </div>
                 </div>
-              )}
+              ))}
+              {!students.length && <div style={{textAlign:'center',padding:40,color:'var(--smoke)'}}>No creaste alumnos aún. ¡Empezá registrando tu primer alumno!</div>}
             </div>
           </div>
         )}
 
-        {/* ── VALIDACIONES ── */}
-        {tab === 'validaciones' && (
-          <div style={{ animation: 'fadeUp 0.4s ease' }}>
-            <div className="dashboard-header">
-              <h2>Validar habilidades</h2>
-              <p>Reconocé las competencias blandas de tus alumnos</p>
+        {/* ALUMNOS */}
+        {tab==='alumnos' && (
+          <div style={{animation:'fadeUp 0.4s ease'}}>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:24}}>
+              <div><h2>Mis alumnos</h2><p>Alumnos que creaste y supervisás</p></div>
+              <button className="btn btn-primary btn-sm" onClick={()=>{setForm({});setModal('student')}}><Plus size={16}/> Nuevo alumno</button>
             </div>
-
-            <div style={{ background: 'rgba(27,186,170,0.08)', border: '1px solid rgba(27,186,170,0.25)', borderRadius: 'var(--r-md)', padding: 20, marginBottom: 28 }}>
-              <h4 style={{ color: 'var(--teal)', marginBottom: 8 }}>¿Qué es una validación?</h4>
-              <p style={{ fontSize: '0.9rem' }}>Al validar una habilidad blanda de un alumno, estás certificando que observaste esa competencia en el aula. Esto enriquece su perfil y lo hace más visible para las empresas. Es el equivalente digital de una recomendación docente.</p>
-            </div>
-
-            <h3 style={{ marginBottom: 16, color: 'var(--cream)' }}>Seleccioná un alumno para validar</h3>
-            <div className="grid-3">
-              {students.map(s => (
-                <button key={s.id} onClick={() => { setSelected(s); setModal('validate') }}
-                  style={{
-                    background: selected?.id === s.id ? 'rgba(27,186,170,0.15)' : 'var(--bg-card)',
-                    border: `1px solid ${selected?.id === s.id ? 'var(--teal)' : 'rgba(255,255,255,0.08)'}`,
-                    borderRadius: 'var(--r-md)', padding: 16, cursor: 'pointer',
-                    textAlign: 'left', transition: 'all 0.2s'
-                  }}
-                  onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--teal)'}
-                  onMouseLeave={e => e.currentTarget.style.borderColor = selected?.id === s.id ? 'var(--teal)' : 'rgba(255,255,255,0.08)'}
-                >
-                  <div style={{ fontWeight: 600, color: 'var(--cream)', marginBottom: 4 }}>{s.full_name}</div>
-                  <div style={{ fontSize: '0.8rem', color: 'var(--smoke)' }}>{s.orientation} · {s.grade}</div>
-                  {(s.validations || []).length > 0 && (
-                    <div style={{ marginTop: 10, display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-                      {(s.validations || []).slice(0, 3).map(v => (
-                        <span key={v.id} className="badge badge-teal" style={{ fontSize: '0.7rem' }}><Check size={10} /> {v.skill}</span>
-                      ))}
+            <div style={{display:'flex',flexDirection:'column',gap:12}}>
+              {students.map(s=>(
+                <div key={s.id} className="card">
+                  <div style={{display:'flex',alignItems:'center',gap:12}}>
+                    {s.avatar_url
+                      ? <img src={s.avatar_url} style={{width:44,height:44,borderRadius:'50%',objectFit:'cover',flexShrink:0}}/>
+                      : <div style={{width:44,height:44,borderRadius:'50%',background:'rgba(27,186,170,0.15)',display:'flex',alignItems:'center',justifyContent:'center',color:'var(--teal)',fontWeight:700,fontSize:'1.1rem',flexShrink:0}}>{s.full_name?.charAt(0)||'A'}</div>
+                    }
+                    <div style={{flex:1}}>
+                      <div style={{color:'var(--cream)',fontWeight:600}}>{s.full_name}</div>
+                      <div style={{fontSize:'0.82rem',color:'var(--smoke)',marginTop:2}}>{s.email} · {s.orientation} · {s.grade}</div>
+                      {s.bio && <div style={{fontSize:'0.82rem',color:'var(--muted)',marginTop:4,fontStyle:'italic'}}>"{s.bio}"</div>}
                     </div>
-                  )}
-                </button>
+                    <button className="btn btn-outline btn-sm" onClick={()=>{setSelected(s);setModal('validate')}}>
+                      <Award size={14}/> Validar habilidad
+                    </button>
+                  </div>
+                  <div style={{display:'flex',gap:8,marginTop:12,flexWrap:'wrap'}}>
+                    {Number(s.application_count||0)>0 && <span className="badge badge-wine">{s.application_count} postulaciones</span>}
+                    {Number(s.portfolio_count||0)>0  && <span className="badge badge-smoke">{s.portfolio_count} proyectos</span>}
+                    {Number(s.skill_count||0)>0      && <span className="badge badge-teal"><CheckCircle size={10}/> {s.skill_count} habilidades validadas</span>}
+                    {(s.interests||[]).slice(0,3).map(i=><span key={i} className="badge badge-gold">{i}</span>)}
+                  </div>
+                </div>
               ))}
-              {!students.length && (
-                <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: 40, color: 'var(--smoke)' }}>No hay alumnos para validar aún.</div>
-              )}
+              {!students.length && <div style={{textAlign:'center',padding:60,color:'var(--smoke)'}}><Users size={40} style={{opacity:0.3,marginBottom:12}}/><p>Todavía no tenés alumnos. Creá el primero con el botón de arriba.</p></div>}
             </div>
+          </div>
+        )}
+
+        {/* VALIDACIONES */}
+        {tab==='validaciones' && (
+          <div style={{animation:'fadeUp 0.4s ease'}}>
+            <div className="dashboard-header"><h2>Validar habilidades</h2><p>Certificá competencias de tus alumnos</p></div>
+            <div className="grid-3">
+              {students.map(s=>(
+                <div key={s.id} className="card card-glow" style={{cursor:'pointer'}} onClick={()=>{setSelected(s);setModal('validate')}}>
+                  <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:12}}>
+                    <div style={{width:36,height:36,borderRadius:'50%',background:'rgba(27,186,170,0.2)',display:'flex',alignItems:'center',justifyContent:'center',color:'var(--teal)',fontWeight:700,flexShrink:0}}>{s.full_name?.charAt(0)}</div>
+                    <div>
+                      <div style={{color:'var(--cream)',fontWeight:600,fontSize:'0.95rem'}}>{s.full_name}</div>
+                      <div style={{fontSize:'0.78rem',color:'var(--smoke)'}}>{s.orientation}</div>
+                    </div>
+                  </div>
+                  {Number(s.skill_count||0)>0 && <p style={{fontSize:'0.82rem',color:'var(--teal)'}}><Check size={12}/> {s.skill_count} habilidades ya validadas</p>}
+                  <button className="btn btn-outline btn-sm" style={{width:'100%',justifyContent:'center',marginTop:8}}><Award size={14}/> Validar habilidad</button>
+                </div>
+              ))}
+              {!students.length && <div style={{gridColumn:'1/-1',textAlign:'center',padding:60,color:'var(--smoke)'}}>Primero creá alumnos para poder validar sus habilidades.</div>}
+            </div>
+          </div>
+        )}
+
+        {/* PERFIL */}
+        {tab==='perfil' && (
+          <div style={{animation:'fadeUp 0.4s ease'}}>
+            <div className="dashboard-header"><h2>Mi perfil docente</h2><p>Actualizá tu información personal y profesional</p></div>
+            <ProfileEditor role="teacher" initialData={profileData||profile} onSaved={p=>{setProfileData(p);setMsg('✅ Perfil actualizado')}}/>
           </div>
         )}
       </main>
 
-      {/* ── MODAL: Validate skill ── */}
-      {modal === 'validate' && selected && (
-        <div className="modal-overlay" onClick={() => setModal(null)}>
-          <div className="modal" onClick={e => e.stopPropagation()}>
+      {/* MODAL: nuevo alumno */}
+      {modal==='student' && (
+        <div className="modal-overlay" onClick={()=>setModal(null)}>
+          <div className="modal" style={{maxWidth:480}} onClick={e=>e.stopPropagation()}>
             <div className="modal-header">
-              <div>
-                <h3 style={{ color: 'var(--cream)' }}>Validar habilidad</h3>
-                <p style={{ fontSize: '0.85rem', color: 'var(--teal)' }}>{selected.full_name}</p>
-              </div>
-              <button onClick={() => setModal(null)} style={{ background: 'none', border: 'none', color: 'var(--smoke)', cursor: 'pointer' }}><X size={20} /></button>
+              <h3 style={{color:'var(--cream)'}}>Nuevo alumno</h3>
+              <button onClick={()=>setModal(null)} style={{background:'none',border:'none',color:'var(--smoke)',cursor:'pointer'}}><X size={20}/></button>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              <div>
-                <label style={{ fontSize: '0.82rem', color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 10 }}>Habilidad a validar</label>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                  {SKILLS.map(skill => (
-                    <button key={skill} onClick={() => setForm({ ...form, skill })}
-                      className={`badge ${form.skill === skill ? 'badge-teal' : 'badge-smoke'}`}
-                      style={{ cursor: 'pointer', border: 'none', padding: '6px 12px', fontSize: '0.8rem' }}>
-                      {form.skill === skill && <Check size={11} />} {skill}
-                    </button>
-                  ))}
-                </div>
+            <div style={{display:'flex',flexDirection:'column',gap:12}}>
+              <div className="form-group"><label>Nombre completo *</label>
+                <input className="input" placeholder="Ej: Valentina Pérez" value={form.full_name||''} onChange={e=>setForm({...form,full_name:e.target.value})}/></div>
+              <div className="form-group"><label>Email *</label>
+                <input className="input" type="email" placeholder="alumno@correo.com" value={form.email||''} onChange={e=>setForm({...form,email:e.target.value})}/></div>
+              <div className="form-group"><label>Contraseña inicial *</label>
+                <input className="input" type="password" placeholder="Mín. 8 caracteres" value={form.password||''} onChange={e=>setForm({...form,password:e.target.value})}/></div>
+              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
+                <div className="form-group"><label>Orientación</label>
+                  <select className="input" value={form.orientation||''} onChange={e=>setForm({...form,orientation:e.target.value})}>
+                    <option value="">Seleccionar</option>
+                    {ORIENTATIONS.map(o=><option key={o} value={o}>{o}</option>)}
+                  </select></div>
+                <div className="form-group"><label>Año</label>
+                  <select className="input" value={form.grade||''} onChange={e=>setForm({...form,grade:e.target.value})}>
+                    <option value="">Seleccionar</option>
+                    {GRADES.map(g=><option key={g} value={g}>{g}</option>)}
+                  </select></div>
               </div>
-              <div className="form-group">
-                <label>Observación (opcional)</label>
-                <textarea className="input" rows={3} placeholder="Ej: Demostró liderazgo al coordinar el trabajo grupal en el proyecto final..." value={form.note || ''} onChange={e => setForm({ ...form, note: e.target.value })} style={{ resize: 'vertical' }} />
-              </div>
-              <div style={{ display: 'flex', gap: 12 }}>
-                <button className="btn btn-outline" onClick={() => setModal(null)} style={{ flex: 1, justifyContent: 'center' }}>Cancelar</button>
-                <button className="btn btn-teal" onClick={validateSkill} disabled={!form.skill} style={{ flex: 1, justifyContent: 'center' }}>
-                  <Award size={16} /> Validar habilidad
-                </button>
+              <div className="form-group"><label>Localidad</label>
+                <input className="input" placeholder="Ej: Capital" value={form.location||''} onChange={e=>setForm({...form,location:e.target.value})}/></div>
+            </div>
+            <div style={{display:'flex',gap:12,marginTop:16}}>
+              <button className="btn btn-outline" onClick={()=>setModal(null)} style={{flex:1,justifyContent:'center'}}>Cancelar</button>
+              <button className="btn btn-primary" onClick={createStudent} style={{flex:1,justifyContent:'center'}}>Crear alumno</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: validar habilidad */}
+      {modal==='validate' && selected && (
+        <div className="modal-overlay" onClick={()=>setModal(null)}>
+          <div className="modal" onClick={e=>e.stopPropagation()}>
+            <div className="modal-header">
+              <div><h3 style={{color:'var(--cream)'}}>Validar habilidad</h3><p style={{fontSize:'0.85rem',color:'var(--teal)'}}>{selected.full_name}</p></div>
+              <button onClick={()=>setModal(null)} style={{background:'none',border:'none',color:'var(--smoke)',cursor:'pointer'}}><X size={20}/></button>
+            </div>
+            <div style={{display:'flex',flexDirection:'column',gap:14}}>
+              <div className="form-group"><label>Habilidad a validar</label>
+                <select className="input" value={form.skill||''} onChange={e=>setForm({...form,skill:e.target.value})}>
+                  <option value="">Seleccionar habilidad</option>
+                  {SKILLS.map(s=><option key={s} value={s}>{s}</option>)}
+                </select></div>
+              <div className="form-group"><label>Nota o comentario (opcional)</label>
+                <textarea className="input" rows={3} placeholder="¿Por qué validás esta habilidad?" value={form.note||''} onChange={e=>setForm({...form,note:e.target.value})} style={{resize:'vertical'}}/></div>
+              <div style={{display:'flex',gap:12}}>
+                <button className="btn btn-outline" onClick={()=>setModal(null)} style={{flex:1,justifyContent:'center'}}>Cancelar</button>
+                <button className="btn btn-teal" onClick={validateSkill} style={{flex:1,justifyContent:'center'}}><Check size={16}/> Validar</button>
               </div>
             </div>
           </div>
         </div>
       )}
-    </div>
-  )
-}
-
-function StudentRow({ s, expanded, onValidate }) {
-  return (
-    <div className="card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        <div style={{
-          width: 40, height: 40, borderRadius: '50%', flexShrink: 0,
-          background: 'linear-gradient(135deg, var(--teal-dark), var(--teal))',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontFamily: 'var(--font-display)', fontWeight: 700, color: 'var(--ink)', fontSize: '1rem'
-        }}>{s.full_name?.charAt(0) || '?'}</div>
-        <div>
-          <div style={{ fontWeight: 600, color: 'var(--cream)' }}>{s.full_name}</div>
-          <div style={{ fontSize: '0.8rem', color: 'var(--smoke)' }}>{s.orientation} · {s.grade}</div>
-        </div>
-      </div>
-      <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-        <span className="badge badge-smoke"><BookOpen size={11} /> {s.portfolio_count || 0} proyectos</span>
-        <span className="badge badge-smoke"><Award size={11} /> {(s.validations || []).length} validaciones</span>
-        <button className="btn btn-teal btn-sm" onClick={onValidate}><Plus size={13} /> Validar</button>
-      </div>
     </div>
   )
 }

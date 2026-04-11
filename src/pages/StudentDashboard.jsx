@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import Sidebar from '../components/Sidebar'
-import { getProfile, vacancyAPI, applicationAPI, portfolioAPI, logbookAPI, STATUS_LABELS, STATUS_BADGE, calcMatchScore } from '../utils/auth'
+import { getProfile, getUser, vacancyAPI, applicationAPI, portfolioAPI, logbookAPI, profileAPI, setProfile, STATUS_LABELS, STATUS_BADGE, calcMatchScore } from '../utils/auth'
+import ProfileEditor from '../components/ProfileEditor'
 import { LayoutDashboard, Search, FolderOpen, BookOpen, Star, Plus, X, Clock, MapPin, Briefcase, ChevronRight, Award, FileText } from 'lucide-react'
 
 export default function StudentDashboard() {
@@ -64,6 +65,7 @@ export default function StudentDashboard() {
     { id: 'vacantes', label: 'Pasantías', icon: <Search size={16} />, count: vacancies.length },
     { id: 'postulaciones', label: 'Mis postulaciones', icon: <Briefcase size={16} />, count: pendingApps },
     { id: 'portafolio', label: 'Mi portafolio', icon: <FolderOpen size={16} />, count: portfolio.length },
+    { id: 'perfil', label: 'Mi perfil', icon: <Star size={16} /> },
     { id: 'bitacora', label: 'Bitácora', icon: <BookOpen size={16} />, count: logbook.length },
   ]
 
@@ -260,6 +262,18 @@ export default function StudentDashboard() {
             </div>
           </div>
         )}
+
+        {/* ── PERFIL ── */}
+        {tab === 'perfil' && (
+          <div style={{ animation: 'fadeUp 0.4s ease' }}>
+            <div className="dashboard-header">
+              <h2>Mi perfil</h2>
+              <p>Actualizá tu información para mejorar tu match con las pasantías</p>
+            </div>
+            <ProfileEditor role="student" initialData={profile} onSaved={p => { setMsg('✅ Perfil actualizado'); }} />
+          </div>
+        )}
+
       </main>
 
       {/* ── MODAL: Apply ── */}

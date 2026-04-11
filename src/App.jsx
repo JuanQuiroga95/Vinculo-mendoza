@@ -6,15 +6,16 @@ import Register from './pages/Register'
 import StudentDashboard from './pages/StudentDashboard'
 import CompanyDashboard from './pages/CompanyDashboard'
 import TeacherDashboard from './pages/TeacherDashboard'
+import AdminDashboard from './pages/AdminDashboard'
 
 function ProtectedRoute({ children, role }) {
   if (!isLoggedIn()) return <Navigate to="/login" replace />
   const user = getUser()
   if (role && user?.role !== role) {
-    // Redirect to correct dashboard
-    if (user?.role === 'student')  return <Navigate to="/alumno" replace />
-    if (user?.role === 'company')  return <Navigate to="/empresa" replace />
-    if (user?.role === 'teacher')  return <Navigate to="/docente" replace />
+    if (user?.role === 'student') return <Navigate to="/alumno" replace />
+    if (user?.role === 'company') return <Navigate to="/empresa" replace />
+    if (user?.role === 'teacher') return <Navigate to="/docente" replace />
+    if (user?.role === 'admin')   return <Navigate to="/admin"   replace />
   }
   return children
 }
@@ -22,9 +23,10 @@ function ProtectedRoute({ children, role }) {
 function DashboardRedirect() {
   const user = getUser()
   if (!user) return <Navigate to="/login" replace />
-  if (user.role === 'student')  return <Navigate to="/alumno" replace />
-  if (user.role === 'company')  return <Navigate to="/empresa" replace />
-  if (user.role === 'teacher')  return <Navigate to="/docente" replace />
+  if (user.role === 'student') return <Navigate to="/alumno" replace />
+  if (user.role === 'company') return <Navigate to="/empresa" replace />
+  if (user.role === 'teacher') return <Navigate to="/docente" replace />
+  if (user.role === 'admin')   return <Navigate to="/admin"   replace />
   return <Navigate to="/login" replace />
 }
 
@@ -36,18 +38,11 @@ export default function App() {
         <Route path="/login"     element={<Login />} />
         <Route path="/registro"  element={<Register />} />
         <Route path="/dashboard" element={<DashboardRedirect />} />
-
-        <Route path="/alumno" element={
-          <ProtectedRoute role="student"><StudentDashboard /></ProtectedRoute>
-        } />
-        <Route path="/empresa" element={
-          <ProtectedRoute role="company"><CompanyDashboard /></ProtectedRoute>
-        } />
-        <Route path="/docente" element={
-          <ProtectedRoute role="teacher"><TeacherDashboard /></ProtectedRoute>
-        } />
-
-        <Route path="*" element={<Navigate to="/" replace />} />
+        <Route path="/alumno"    element={<ProtectedRoute role="student"><StudentDashboard /></ProtectedRoute>} />
+        <Route path="/empresa"   element={<ProtectedRoute role="company"><CompanyDashboard /></ProtectedRoute>} />
+        <Route path="/docente"   element={<ProtectedRoute role="teacher"><TeacherDashboard /></ProtectedRoute>} />
+        <Route path="/admin"     element={<ProtectedRoute role="admin"><AdminDashboard /></ProtectedRoute>} />
+        <Route path="*"          element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
   )

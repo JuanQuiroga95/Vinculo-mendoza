@@ -95,6 +95,7 @@ export default function Login() {
         <div style={{ marginTop: 24, padding: 16, background: 'rgba(212,168,67,0.06)', border: '1px solid rgba(212,168,67,0.15)', borderRadius: 'var(--r-md)' }}>
           <p style={{ fontSize: '0.78rem', color: 'var(--gold)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10, fontWeight: 600 }}>Demo — usuarios de prueba</p>
           {[
+            { label: '🔑 Admin', email: 'admin@demo.com', pass: 'demo1234' },
             { label: '👨‍🎓 Alumno', email: 'alumno@demo.com', pass: 'demo1234' },
             { label: '🏢 Empresa', email: 'empresa@demo.com', pass: 'demo1234' },
             { label: '👩‍🏫 Docente', email: 'docente@demo.com', pass: 'demo1234' },
