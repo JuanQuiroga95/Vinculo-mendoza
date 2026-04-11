@@ -1,3 +1,4 @@
+// src/utils/auth.js — Todo va a /api con ?_path= (GET) o body._path (POST/PUT/DELETE)
 const BASE = '/api';
 
 export function getToken()   { return localStorage.getItem('vm_token'); }
@@ -13,65 +14,136 @@ export function logout() {
   window.location.href = '/login';
 }
 
+// GET/DELETE → query param; POST/PUT → body con _path
 async function apiFetch(path, options = {}) {
-  const token = getToken();
-  const headers = { 'Content-Type': 'application/json', ...options.headers };
+  const token   = getToken();
+  const method  = (options.method || 'GET').toUpperCase();
+  const headers = { ...options.headers };
   if (token) headers['Authorization'] = `Bearer ${token}`;
-  const res = await fetch(`${BASE}${path}`, { ...options, headers });
+
+  let url  = BASE;
+  let body = undefined;
+
+  if (method === 'GET' || method === 'DELETE') {
+    // Para DELETE también ponemos _path en query
+    const params = new URLSearchParams({ _path: path });
+    // Pasar query params adicionales
+    if (options.query) Object.entries(options.query).forEach(([k,v]) => params.set(k, v));
+    url = `${BASE}?${params}`;
+    if (method === 'DELETE' && options.body) {
+      headers['Content-Type'] = 'application/json';
+      // DELETE con body: lo mandamos como POST con _path
+      body = JSON.stringify({ _path: path, ...JSON.parse(options.body) });
+      return fetch(BASE, { method: 'POST', headers: { ...headers, 'x-method-override': 'DELETE' }, body }).then(r => r.json().then(d => { if (!r.ok) throw new Error(d.error || 'Error'); return d; }));
+    }
+  } else {
+    // POST / PUT
+    headers['Content-Type'] = 'application/json';
+    const parsed = options.body ? JSON.parse(options.body) : {};
+    body = JSON.stringify({ _path: path, ...parsed });
+  }
+
+  const res  = await fetch(url, { method, headers, body });
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || 'Error desconocido');
   return data;
 }
 
+// DELETE especial que usa POST internamente con override
+async function apiDelete(path, bodyObj = {}) {
+  const token = getToken();
+  const headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` };
+  const res  = await fetch(BASE, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ _path: path, _method: 'DELETE', ...bodyObj }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Error');
+  return data;
+}
+
+// GET con query params extra
+async function apiGet(path, query = {}) {
+  const token = getToken();
+  const params = new URLSearchParams({ _path: path, ...query });
+  const res = await fetch(`${BASE}?${params}`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Error');
+  return data;
+}
+
+const post = (path, body)   => apiFetch(path, { method: 'POST', body: JSON.stringify(body) });
+const put  = (path, body)   => apiFetch(path, { method: 'PUT',  body: JSON.stringify(body) });
+const get  = (path, q = {}) => apiGet(path, q);
+const del  = (path, body)   => apiDelete(path, body);
+
 export const authAPI = {
-  login:    (body) => apiFetch('/auth/login',    { method: 'POST', body: JSON.stringify(body) }),
-  register: (body) => apiFetch('/auth/register', { method: 'POST', body: JSON.stringify(body) }),
+  login:    (b) => post('auth/login', b),
+  register: (b) => post('auth/register', b),
 };
 
 export const vacancyAPI = {
-  getAll:  () => apiFetch('/vacancies'),
-  create:  (body) => apiFetch('/vacancies', { method: 'POST', body: JSON.stringify(body) }),
-  update:  (body) => apiFetch('/vacancies', { method: 'PUT',  body: JSON.stringify(body) }),
-  remove:  (id)  => apiFetch('/vacancies', { method: 'DELETE', body: JSON.stringify({ vacancy_id: id }) }),
+  getAll: ()  => get('vacancies'),
+  create: (b) => post('vacancies', b),
+  update: (b) => put('vacancies', b),
+  remove: (id)=> del('vacancies', { vacancy_id: id }),
 };
 
 export const applicationAPI = {
-  getMine: () => apiFetch('/applications'),
-  apply:   (body) => apiFetch('/applications', { method: 'POST', body: JSON.stringify(body) }),
-  update:  (body) => apiFetch('/applications', { method: 'PUT',  body: JSON.stringify(body) }),
+  getMine: ()  => get('applications'),
+  apply:   (b) => post('applications', b),
+  update:  (b) => put('applications', b),
 };
 
 export const portfolioAPI = {
-  getMine: () => apiFetch('/students/portfolio'),
-  add:     (body) => apiFetch('/students/portfolio', { method: 'POST', body: JSON.stringify(body) }),
-  remove:  (item_id) => apiFetch('/students/portfolio', { method: 'DELETE', body: JSON.stringify({ item_id }) }),
+  getMine: ()    => get('students/portfolio'),
+  add:     (b)   => post('students/portfolio', b),
+  remove:  (id)  => del('students/portfolio', { item_id: id }),
 };
 
 export const logbookAPI = {
-  getMine:  () => apiFetch('/students/logbook'),
-  addEntry: (body) => apiFetch('/students/logbook', { method: 'POST', body: JSON.stringify(body) }),
+  getMine:  ()  => get('students/logbook'),
+  getAll:   ()  => get('students/logbook', { all: '1' }),
+  addEntry: (b) => post('students/logbook', b),
 };
 
 export const teacherAPI = {
-  getStudents:   () => apiFetch('/users'),
-  validateSkill: (body) => apiFetch('/teachers/validations', { method: 'POST', body: JSON.stringify(body) }),
-  getValidations:(student_id) => apiFetch(`/teachers/validations?student_id=${student_id}`),
-  approveLogbook:(body) => apiFetch('/teachers/validations', { method: 'PUT', body: JSON.stringify(body) }),
-  getLogbook:    () => apiFetch('/students/logbook?all=1'),
+  getStudents:   ()   => get('teachers/validations'),
+  validateSkill: (b)  => post('teachers/validations', b),
+  getValidations:(sid)=> get('teachers/validations', { student_id: sid }),
+  approveLogbook:(b)  => put('teachers/validations', b),
 };
 
 export const profileAPI = {
-  get:    () => apiFetch('/profile'),
-  update: (body) => apiFetch('/profile', { method: 'PUT', body: JSON.stringify(body) }),
+  get:    ()  => get('profile'),
+  update: (b) => put('profile', b),
 };
 
 export const adminAPI = {
-  getUsers:    () => apiFetch('/users'),
-  createUser:  (body) => apiFetch('/users', { method: 'POST', body: JSON.stringify(body) }),
-  getSchools:  () => apiFetch('/schools'),
-  createSchool:(body) => apiFetch('/schools', { method: 'POST', body: JSON.stringify(body) }),
-  updateSchool:(body) => apiFetch('/schools', { method: 'PUT',  body: JSON.stringify(body) }),
+  getUsers:     ()  => get('users'),
+  createUser:   (b) => post('users', b),
+  getSchools:   ()  => get('schools'),
+  createSchool: (b) => post('schools', b),
+  updateSchool: (b) => put('schools', b),
 };
+
+// Upload — multipart, no usa apiFetch
+export async function uploadImage(file) {
+  const token    = getToken();
+  const formData = new FormData();
+  formData.append('image', file);
+  const res  = await fetch(`${BASE}?_path=upload/image`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: formData,
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Error al subir imagen');
+  return data.url;
+}
 
 export function calcMatchScore(student, vacancy) {
   let score = 0;
