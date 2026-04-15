@@ -18,8 +18,12 @@ export function getProfile() {
 export function setProfile(p) { localStorage.setItem('vm_profile', JSON.stringify(p)); }
 export function removeProfile() { localStorage.removeItem('vm_profile'); }
 
-export function logout() {
+export function clearAuth() {
   removeToken(); removeUser(); removeProfile();
+}
+
+export function logout() {
+  clearAuth();
   window.location.href = '/login';
 }
 
