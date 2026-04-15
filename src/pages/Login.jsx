@@ -98,6 +98,7 @@ export default function Login() {
             { label: '👨‍🎓 Alumno', email: 'alumno@demo.com', pass: 'demo1234' },
             { label: '🏢 Empresa', email: 'empresa@demo.com', pass: 'demo1234' },
             { label: '👩‍🏫 Docente', email: 'docente@demo.com', pass: 'demo1234' },
+            { label: '🛡️ Admin', email: 'admin@demo.com', pass: 'demo1234' },
           ].map(d => (
             <button key={d.email} onClick={() => setForm({ email: d.email, password: d.pass })}
               style={{ display: 'block', width: '100%', textAlign: 'left', background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: '0.83rem', padding: '4px 0', transition: 'color 0.2s' }}

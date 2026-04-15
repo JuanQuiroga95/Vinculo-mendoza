@@ -1,20 +1,14 @@
 // db/seed.js — Run with: node db/seed.js
 // Requires POSTGRES_URL env variable
 
-import { createRequire } from 'module'
-const require = createRequire(import.meta.url)
-
-// Simple pg usage for seeding
 import pg from 'pg'
 import bcrypt from 'bcryptjs'
 
 const { Pool } = pg
-
 const pool = new Pool({ connectionString: process.env.POSTGRES_URL, ssl: { rejectUnauthorized: false } })
 
 async function seed() {
   console.log('🌱 Seeding demo users...')
-
   const hash = await bcrypt.hash('demo1234', 12)
 
   // Student
@@ -41,18 +35,17 @@ async function seed() {
     [cu.id, 'Agencia Digital Mendoza', 'Tecnología / TIC', 'Capital', 'Carlos Rivas']
   )
 
-  // Add demo vacancy
   if (comp) {
     await pool.query(
       `INSERT INTO vacancies (company_id, title, description, orientation_required, hours_per_week, location, tags, slots)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8) ON CONFLICT DO NOTHING`,
-      [comp.id, 'Pasante de Community Management', 'Apoyo en gestión de redes sociales, creación de contenido y análisis de métricas. Ideal para orientación Comunicación.',
+      [comp.id, 'Pasante de Community Management', 'Apoyo en gestión de redes sociales, creación de contenido y análisis de métricas.',
        'Comunicación', 15, 'Capital', ['Marketing', 'Redes Sociales', 'Contenido'], 2]
     )
     await pool.query(
       `INSERT INTO vacancies (company_id, title, description, orientation_required, hours_per_week, location, tags, slots)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8) ON CONFLICT DO NOTHING`,
-      [comp.id, 'Pasante de Diseño Gráfico', 'Asistencia en diseño de piezas para clientes. Manejo básico de Canva o Adobe. ',
+      [comp.id, 'Pasante de Diseño Gráfico', 'Asistencia en diseño de piezas para clientes. Manejo básico de Canva o Adobe.',
        'Arte', 12, 'Godoy Cruz', ['Diseño', 'Visual', 'Arte'], 1]
     )
   }
@@ -68,10 +61,17 @@ async function seed() {
     [tu.id, 'Prof. María González', 'EMETA N°1 - Mendoza', 'Proyecto Vocacional']
   )
 
+  // Master Admin
+  await pool.query(
+    `INSERT INTO users (email, password_hash, role) VALUES ($1, $2, $3) ON CONFLICT (email) DO UPDATE SET password_hash=$2`,
+    ['admin@demo.com', hash, 'admin']
+  )
+
   console.log('✅ Seed complete!')
-  console.log('   alumno@demo.com / demo1234')
+  console.log('   alumno@demo.com  / demo1234')
   console.log('   empresa@demo.com / demo1234')
   console.log('   docente@demo.com / demo1234')
+  console.log('   admin@demo.com   / demo1234  ← master admin')
   await pool.end()
 }
 
