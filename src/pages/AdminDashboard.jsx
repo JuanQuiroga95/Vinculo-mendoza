@@ -843,7 +843,72 @@ export default function AdminDashboard() {
     </div>
   )
 }
- ? 100 : Math.min(100, Math.round(t.visits / (t.students * 2) * 100))
+
+// ─── DOCENTES ─────────────────────────────────────────────────────────────────
+
+function TeachersTab({ teachers, setTeachers }) {
+  const [showAdd, setShowAdd] = useState(false)
+  const [newTeacher, setNewTeacher] = useState({ name: '', email: '', school: 'Ing. Ricardo Videla', subject: '' })
+  const [search, setSearch] = useState('')
+  const [msg, setMsg] = useState('')
+  const filtered = teachers.filter(t => t.name.toLowerCase().includes(search.toLowerCase()))
+
+  function addTeacher() {
+    if (!newTeacher.name || !newTeacher.email) return
+    const t = { id: `t${Date.now()}`, ...newTeacher, students: 0, visits: 0, pending: 0 }
+    setTeachers(prev => [...prev, t])
+    setShowAdd(false); setNewTeacher({ name: '', email: '', school: 'Ing. Ricardo Videla', subject: '' })
+    setMsg(`✅ Docente ${t.name} creado. Credenciales enviadas a ${t.email}`)
+    setTimeout(() => setMsg(''), 4000)
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      {msg && <div style={{ background: 'rgba(74,222,128,0.12)', border: '1px solid rgba(74,222,128,0.3)', borderRadius: 10, padding: '10px 16px', color: '#4ade80', fontSize: '0.85rem' }}>{msg}</div>}
+      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+        <div style={{ position: 'relative', flex: 1 }}>
+          <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--smoke)' }} />
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar docente…" style={{ width: '100%', background: 'rgba(250,245,237,0.06)', border: '1px solid rgba(250,245,237,0.1)', borderRadius: 10, padding: '9px 12px 9px 32px', color: 'var(--cream)', fontSize: '0.85rem', boxSizing: 'border-box' }} />
+        </div>
+        <button onClick={() => setShowAdd(!showAdd)} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--wine)', border: 'none', borderRadius: 10, padding: '9px 18px', color: 'white', cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem' }}>
+          <UserPlus size={15} /> Nuevo Docente
+        </button>
+      </div>
+      {showAdd && (
+        <div style={{ background: 'rgba(250,245,237,0.04)', border: '1px solid rgba(212,168,67,0.2)', borderRadius: 14, padding: 20 }}>
+          <div style={{ fontWeight: 600, color: 'var(--gold)', fontSize: '0.9rem', marginBottom: 14 }}>Crear cuenta docente</div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            {[
+              { key: 'name', label: 'Nombre completo (APELLIDO, Nombre)', placeholder: 'GARCÍA, María' },
+              { key: 'email', label: 'Email institucional', placeholder: 'mgarcia@escola.edu.ar' },
+              { key: 'school', label: 'Escuela', placeholder: 'Ing. Ricardo Videla' },
+              { key: 'subject', label: 'Materia / Especialidad', placeholder: 'Proyecto Vocacional' },
+            ].map(f => (
+              <div key={f.key}>
+                <label style={{ fontSize: '0.78rem', color: 'var(--smoke)', display: 'block', marginBottom: 5 }}>{f.label}</label>
+                <input value={newTeacher[f.key]} onChange={e => setNewTeacher(p => ({ ...p, [f.key]: e.target.value }))} placeholder={f.placeholder} style={{ width: '100%', background: 'rgba(250,245,237,0.06)', border: '1px solid rgba(250,245,237,0.12)', borderRadius: 8, padding: '8px 12px', color: 'var(--cream)', fontSize: '0.85rem' }} />
+              </div>
+            ))}
+          </div>
+          <div style={{ display: 'flex', gap: 10, marginTop: 14 }}>
+            <button onClick={addTeacher} style={{ background: 'var(--wine)', border: 'none', borderRadius: 8, padding: '8px 18px', color: 'white', cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem' }}>Crear + enviar credenciales</button>
+            <button onClick={() => setShowAdd(false)} style={{ background: 'none', border: '1px solid rgba(250,245,237,0.15)', borderRadius: 8, padding: '8px 14px', color: 'var(--smoke)', cursor: 'pointer', fontSize: '0.85rem' }}>Cancelar</button>
+          </div>
+        </div>
+      )}
+      <div style={{ background: 'var(--ink-soft)', border: '1px solid rgba(250,245,237,0.08)', borderRadius: 16, overflow: 'hidden' }}>
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.84rem' }}>
+            <thead>
+              <tr style={{ background: 'rgba(250,245,237,0.04)' }}>
+                {['Docente', 'Email', 'Alumnos', 'Visitas', 'Cumplimiento', 'Acciones'].map(h => (
+                  <th key={h} style={{ padding: '12px 16px', textAlign: 'left', color: 'var(--smoke)', fontWeight: 600 }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((t, i) => {
+                const pct = t.students === 0 ? 100 : Math.min(100, Math.round(t.visits / (t.students * 2) * 100))
                 return (
                   <tr key={t.id} style={{ borderTop: '1px solid rgba(250,245,237,0.05)', background: i%2===0?'transparent':'rgba(250,245,237,0.02)' }}>
                     <td style={{ padding: '12px 16px', fontWeight: 600, color: 'var(--cream)' }}>{t.name}</td>
