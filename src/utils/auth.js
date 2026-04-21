@@ -117,3 +117,37 @@ export const STATUS_BADGE = {
   accepted:  'badge-teal',
   rejected:  'badge-wine',
 };
+
+// ─── v2: Attendance ───────────────────────────────────────────────────────────
+export const attendanceAPI = {
+  getEntries: (pasantiaId) => apiFetch(`/students?_resource=attendance&pasantia_id=${pasantiaId}`),
+  register:   (body) => apiFetch('/students?_resource=attendance', { method: 'POST', body: JSON.stringify(body) }),
+}
+
+// ─── v2: Informe Final ────────────────────────────────────────────────────────
+export const reportAPI = {
+  get:  (pasantiaId) => apiFetch(`/students?_resource=report&pasantia_id=${pasantiaId}`),
+  save: (body) => apiFetch('/students?_resource=report', { method: 'POST', body: JSON.stringify(body) }),
+}
+
+// ─── v2: Pasantía activa del alumno ──────────────────────────────────────────
+export const pasantiaAPI = {
+  getMine: () => apiFetch('/students?_resource=pasantia'),
+}
+
+// ─── v2: Teacher visits & grades ─────────────────────────────────────────────
+export const teacherAPIv2 = {
+  getVisits:   (pasantiaId) => apiFetch(`/teachers?_resource=visits&pasantia_id=${pasantiaId}`),
+  getAllVisits: () => apiFetch('/teachers?_resource=visits'),
+  addVisit:    (body) => apiFetch('/teachers?_resource=visits', { method: 'POST', body: JSON.stringify(body) }),
+  getGrade:    (pasantiaId) => apiFetch(`/grades?pasantia_id=${pasantiaId}`),
+  saveGrade:   (body) => apiFetch('/grades', { method: 'POST', body: JSON.stringify(body) }),
+}
+
+// ─── v2: Admin ICE + Siniestros ───────────────────────────────────────────────
+export const adminAPIv2 = {
+  toggleIce:    (body) => apiFetch('/admin?_resource=dashboard&action=toggle_ice', { method: 'POST', body: JSON.stringify(body) }),
+  getAccidents: () => apiFetch('/admin?_resource=dashboard&action=get_accidents'),
+  addAccident:  (body) => apiFetch('/admin?_resource=dashboard&action=add_accident', { method: 'POST', body: JSON.stringify(body) }),
+  markSent:     (body) => apiFetch('/admin?_resource=dashboard&action=mark_sent', { method: 'POST', body: JSON.stringify(body) }),
+}

@@ -3,25 +3,79 @@
   "outputDirectory": "dist",
   "framework": "vite",
   "rewrites": [
-    { "source": "/api/auth/login",             "destination": "/api/auth?_action=login" },
-    { "source": "/api/auth/register",          "destination": "/api/auth?_action=register" },
-    { "source": "/api/students/portfolio",     "destination": "/api/students?_resource=portfolio" },
-    { "source": "/api/students/logbook",       "destination": "/api/students?_resource=logbook" },
-    { "source": "/api/students/attendance",    "destination": "/api/students?_resource=attendance" },
-    { "source": "/api/teachers/validations",   "destination": "/api/teachers?_resource=validations" },
-    { "source": "/api/teachers/visits",        "destination": "/api/teachers?_resource=visits" },
-    { "source": "/api/admin/dashboard",        "destination": "/api/admin?_resource=dashboard" },
-    { "source": "/api/admin/init",             "destination": "/api/admin?_resource=init" },
-    { "source": "/api/(.*)",                   "destination": "/api/$1" },
-    { "source": "/((?!api/.*).*)",             "destination": "/index.html" }
+    {
+      "source": "/api/auth/login",
+      "destination": "/api/auth?_action=login"
+    },
+    {
+      "source": "/api/auth/register",
+      "destination": "/api/auth?_action=register"
+    },
+    {
+      "source": "/api/students/portfolio",
+      "destination": "/api/students?_resource=portfolio"
+    },
+    {
+      "source": "/api/students/logbook",
+      "destination": "/api/students?_resource=logbook"
+    },
+    {
+      "source": "/api/students/attendance",
+      "destination": "/api/students?_resource=attendance"
+    },
+    {
+      "source": "/api/teachers/validations",
+      "destination": "/api/teachers?_resource=validations"
+    },
+    {
+      "source": "/api/teachers/visits",
+      "destination": "/api/teachers?_resource=visits"
+    },
+    {
+      "source": "/api/admin/dashboard",
+      "destination": "/api/admin?_resource=dashboard"
+    },
+    {
+      "source": "/api/admin/init",
+      "destination": "/api/admin?_resource=init"
+    },
+    {
+      "source": "/api/students/pasantia",
+      "destination": "/api/students?_resource=pasantia"
+    },
+    {
+      "source": "/api/students/report",
+      "destination": "/api/students?_resource=report"
+    },
+    {
+      "source": "/api/admin/import",
+      "destination": "/api/admin/import"
+    },
+    {
+      "source": "/api/(.*)",
+      "destination": "/api/$1"
+    },
+    {
+      "source": "/((?!api/.*).*)",
+      "destination": "/index.html"
+    }
   ],
   "headers": [
     {
       "source": "/api/(.*)",
       "headers": [
-        { "key": "Access-Control-Allow-Origin", "value": "*" },
-        { "key": "Access-Control-Allow-Methods", "value": "GET,POST,PUT,DELETE,OPTIONS" },
-        { "key": "Access-Control-Allow-Headers", "value": "Content-Type, Authorization" }
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
+        },
+        {
+          "key": "Access-Control-Allow-Methods",
+          "value": "GET,POST,PUT,DELETE,OPTIONS"
+        },
+        {
+          "key": "Access-Control-Allow-Headers",
+          "value": "Content-Type, Authorization"
+        }
       ]
     }
   ]

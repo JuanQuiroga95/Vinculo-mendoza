@@ -173,6 +173,87 @@ export default async function handler(req, res) {
   if (resource === 'portfolio')  return handlePortfolio(req, res, auth);
   if (resource === 'logbook')    return handleLogbook(req, res, auth);
   if (resource === 'attendance') return handleAttendance(req, res, auth);
+  if (resource === 'pasantia')   return handleActivePasantia(req, res, auth);
+  if (resource === 'report')     return handleReport(req, res, auth);
 
   return jsonResponse(res, 400, { error: 'Recurso no reconocido' });
+}
+
+// ── PASANTÍA ACTIVA ───────────────────────────────────────────────────────────
+async function handleActivePasantia(req, res, auth) {
+  const [studentRow] = await sql`SELECT id FROM students WHERE user_id = ${auth.userId}`;
+  if (!studentRow) return res.status(404).json({ error: 'Perfil no encontrado' });
+
+  if (req.method === 'GET') {
+    const rows = await sql`
+      SELECT p.id, p.status, c.company_name,
+        COALESCE(SUM(a.hours_worked), 0) AS total_hours,
+        COUNT(a.id) AS attendance_count
+      FROM pasantias p
+      JOIN companies c ON c.id = p.company_id
+      LEFT JOIN attendance a ON a.pasantia_id = p.id
+      WHERE p.student_id = ${studentRow.id} AND p.status IN ('active','simulation')
+      GROUP BY p.id, c.company_name
+      LIMIT 1
+    `;
+    return res.json({ pasantia: rows[0] || null });
+  }
+  return res.status(405).json({ error: 'Método no permitido' });
+}
+
+// ── INFORME FINAL ─────────────────────────────────────────────────────────────
+async function handleReport(req, res, auth) {
+  const [studentRow] = await sql`SELECT id FROM students WHERE user_id = ${auth.userId}`;
+  if (!studentRow) return res.status(404).json({ error: 'Perfil no encontrado' });
+  const studentId = studentRow.id;
+
+  if (req.method === 'GET') {
+    const { pasantia_id } = req.query;
+    if (!pasantia_id) return res.status(400).json({ error: 'Falta pasantia_id' });
+    const rows = await sql`
+      SELECT * FROM final_reports
+      WHERE pasantia_id = ${pasantia_id} AND student_id = ${studentId}
+      LIMIT 1
+    `;
+    return res.json(rows[0] || null);
+  }
+
+  if (req.method === 'POST') {
+    const {
+      pasantia_id, status,
+      q_expectativas, q_sentimientos, q_aprendizajes, q_conflictos,
+      q_saberes, q_mejoras, q_relaciones, q_recomendacion,
+      saberes_tags
+    } = req.body;
+    if (!pasantia_id) return res.status(400).json({ error: 'Falta pasantia_id' });
+
+    const rows = await sql`
+      INSERT INTO final_reports (
+        pasantia_id, student_id, status,
+        q_expectativas, q_sentimientos, q_aprendizajes, q_conflictos,
+        q_saberes, q_mejoras, q_relaciones, q_recomendacion,
+        saberes_tags, updated_at
+      ) VALUES (
+        ${pasantia_id}, ${studentId}, ${status || 'draft'},
+        ${q_expectativas || ''}, ${q_sentimientos || ''}, ${q_aprendizajes || ''}, ${q_conflictos || ''},
+        ${q_saberes || ''}, ${q_mejoras || ''}, ${q_relaciones || ''}, ${q_recomendacion || ''},
+        ${JSON.stringify(saberes_tags || [])}, NOW()
+      )
+      ON CONFLICT (pasantia_id, student_id) DO UPDATE SET
+        status = EXCLUDED.status,
+        q_expectativas = EXCLUDED.q_expectativas,
+        q_sentimientos = EXCLUDED.q_sentimientos,
+        q_aprendizajes = EXCLUDED.q_aprendizajes,
+        q_conflictos = EXCLUDED.q_conflictos,
+        q_saberes = EXCLUDED.q_saberes,
+        q_mejoras = EXCLUDED.q_mejoras,
+        q_relaciones = EXCLUDED.q_relaciones,
+        q_recomendacion = EXCLUDED.q_recomendacion,
+        saberes_tags = EXCLUDED.saberes_tags,
+        updated_at = NOW()
+      RETURNING *
+    `;
+    return res.json(rows[0]);
+  }
+  return res.status(405).json({ error: 'Método no permitido' });
 }

@@ -97,6 +97,16 @@ async function handleDashboard(req, res) {
     return res.json({ success: true });
   }
 
+  if (req.method === 'GET' && action === 'get_accidents') {
+    return handleAccidents(req, res, user);
+  }
+  if (req.method === 'POST' && action === 'add_accident') {
+    return handleAccidents(req, res, user);
+  }
+  if (req.method === 'POST' && action === 'mark_sent') {
+    req.method = 'PUT';
+    return handleAccidents(req, res, user);
+  }
   if (req.method === 'POST' && action === 'update_settings') {
     const { smvm, incentive_pct, max_hours_day, max_hours_week } = req.body;
     return res.json({ success: true, settings: { smvm, incentive_pct, max_hours_day, max_hours_week } });
@@ -275,6 +285,42 @@ async function handleInit(req, res) {
     console.error('Init error:', err);
     return jsonResponse(res, 500, { ok: false, error: err.message, completed_steps: log });
   }
+}
+
+
+// ── ACCIDENT REPORTS ─────────────────────────────────────────────────────────
+async function handleAccidents(req, res, user) {
+  if (req.method === 'GET') {
+    const rows = await sql`
+      SELECT ar.*, s.full_name AS student_name, c.company_name
+      FROM accident_reports ar
+      JOIN students s ON s.id = ar.student_id
+      LEFT JOIN pasantias p ON p.student_id = ar.student_id AND p.status IN ('active','blocked','simulation')
+      LEFT JOIN companies c ON c.id = p.company_id
+      ORDER BY ar.occurred_at DESC
+    `;
+    return res.json({ accidents: rows });
+  }
+  if (req.method === 'POST') {
+    const { student_id, report_type, occurred_at, description } = req.body;
+    if (!student_id || !occurred_at || !description) return res.status(400).json({ error: 'Faltan campos obligatorios' });
+    const [row] = await sql`
+      INSERT INTO accident_reports (student_id, report_type, occurred_at, description, reported_by, reported_at)
+      VALUES (${student_id}, ${report_type || 'accidente_trabajo'}, ${occurred_at}, ${description}, ${user.id}, NOW())
+      RETURNING *
+    `;
+    return res.status(201).json({ accident: row });
+  }
+  if (req.method === 'PUT') {
+    const { id } = req.body;
+    if (!id) return res.status(400).json({ error: 'Falta id' });
+    const [row] = await sql`
+      UPDATE accident_reports SET sent_to_dge = true, sent_at = NOW()
+      WHERE id = ${id} RETURNING *
+    `;
+    return res.json({ accident: row });
+  }
+  return res.status(405).json({ error: 'Método no permitido' });
 }
 
 // ── ROUTER ───────────────────────────────────────────────────────────────────
