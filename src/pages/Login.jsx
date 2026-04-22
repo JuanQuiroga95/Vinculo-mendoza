@@ -31,7 +31,6 @@ export default function Login() {
       minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
       background: 'var(--ink)', position: 'relative', overflow: 'hidden'
     }}>
-      {/* BG decoration */}
       <div style={{ position: 'absolute', top: '-20%', right: '-15%', width: 600, height: 600, borderRadius: '50%', background: 'radial-gradient(circle, rgba(124,29,47,0.2) 0%, transparent 70%)', pointerEvents: 'none' }} />
       <div style={{ position: 'absolute', bottom: '-10%', left: '-10%', width: 400, height: 400, borderRadius: '50%', background: 'radial-gradient(circle, rgba(212,168,67,0.08) 0%, transparent 70%)', pointerEvents: 'none' }} />
 
@@ -54,15 +53,14 @@ export default function Login() {
           borderRadius: 'var(--r-xl)', padding: 36
         }}>
           {error && (
-            <div className="alert alert-error" style={{ marginBottom: 20 }}>
-              {error}
-            </div>
+            <div className="alert alert-error" style={{ marginBottom: 20 }}>{error}</div>
           )}
 
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
             <div className="form-group">
-              <label>Email</label>
-              <input className="input" type="email" placeholder="tu@email.com"
+              <label>Usuario</label>
+              {/* type="text" en lugar de type="email" para aceptar usuarios sin @ */}
+              <input className="input" type="text" placeholder="Tu usuario o email"
                 value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} required />
             </div>
 
@@ -84,30 +82,6 @@ export default function Login() {
               {loading ? 'Ingresando...' : <><LogIn size={16} /> Ingresar</>}
             </button>
           </form>
-
-          <p style={{ textAlign: 'center', marginTop: 24, fontSize: '0.88rem', color: 'var(--smoke)' }}>
-            ¿No tenés cuenta?{' '}
-            <Link to="/registro" style={{ color: 'var(--gold)', fontWeight: 600 }}>Registrate</Link>
-          </p>
-        </div>
-
-        {/* Demo logins */}
-        <div style={{ marginTop: 24, padding: 16, background: 'rgba(212,168,67,0.06)', border: '1px solid rgba(212,168,67,0.15)', borderRadius: 'var(--r-md)' }}>
-          <p style={{ fontSize: '0.78rem', color: 'var(--gold)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10, fontWeight: 600 }}>Demo — usuarios de prueba</p>
-          {[
-            { label: '👨‍🎓 Alumno', email: 'alumno@demo.com', pass: 'demo1234' },
-            { label: '🏢 Empresa', email: 'empresa@demo.com', pass: 'demo1234' },
-            { label: '👩‍🏫 Docente', email: 'docente@demo.com', pass: 'demo1234' },
-            { label: '🛡️ Admin', email: 'admin@demo.com', pass: 'demo1234' },
-          ].map(d => (
-            <button key={d.email} onClick={() => setForm({ email: d.email, password: d.pass })}
-              style={{ display: 'block', width: '100%', textAlign: 'left', background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: '0.83rem', padding: '4px 0', transition: 'color 0.2s' }}
-              onMouseEnter={e => e.target.style.color = 'var(--cream)'}
-              onMouseLeave={e => e.target.style.color = 'var(--muted)'}
-            >
-              {d.label} → {d.email}
-            </button>
-          ))}
         </div>
       </div>
     </div>
