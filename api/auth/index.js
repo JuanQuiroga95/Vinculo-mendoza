@@ -23,9 +23,11 @@ async function handleLogin(req, res) {
     } else if (user.role === 'company') {
       const { rows: p } = await sql`SELECT * FROM companies WHERE user_id = ${user.id} LIMIT 1`;
       profile = p[0] || null;
-    } else if (user.role === 'teacher') {
+    } else if (user.role === 'teacher' || user.role === 'preceptor') {
       const { rows: p } = await sql`SELECT * FROM teachers WHERE user_id = ${user.id} LIMIT 1`;
       profile = p[0] || null;
+    } else if (user.role === 'admin') {
+      profile = { full_name: 'Master Admin', role: 'admin' };
     }
 
     const token = signToken({ userId: user.id, role: user.role, email: user.email });
