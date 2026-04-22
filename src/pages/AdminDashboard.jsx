@@ -450,8 +450,8 @@ function MonitorTab({ students, teachers }) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(180px,1fr))', gap: 16 }}>
         <StatCard icon={Users} label="Alumnos totales" value={students.length} sub="5to 3ra — Ing. Ricardo Videla" color="var(--gold)" />
-        <StatCard icon={CheckCircle} label="100hs completadas" value={completedCount} sub={`${Math.round(completedCount / students.length * 100)}% del curso`} color="#4ade80" />
-        <StatCard icon={Clock} label="Promedio horas" value={`${Math.round(students.reduce((a, s) => a + s.hours, 0) / students.length)}hs`} sub="Meta: 100 horas" color="#60a5fa" />
+        <StatCard icon={CheckCircle} label="100hs completadas" value={completedCount} sub={`${students.length ? Math.round(completedCount / students.length * 100) : 0}% del curso`} color="#4ade80" />
+        <StatCard icon={Clock} label="Promedio horas" value={`${students.length ? Math.round(students.reduce((a, s) => a + s.hours, 0) / students.length) : 0}hs`} sub="Meta: 100 horas" color="#60a5fa" />
         <StatCard icon={AlertTriangle} label="Sin empresa" value={noneCount} sub="Requieren acción" color="#f87171" alert={noneCount > 0} />
         <StatCard icon={Lock} label="Condición ICE" value={iceCount} sub="Bloqueados" color="#f87171" alert={iceCount > 0} />
       </div>
@@ -635,10 +635,7 @@ function IceTab({ students, iceMap, onToggleIce }) {
 
 // ─── SINIESTROS ───────────────────────────────────────────────────────────────
 function SiniestrosTab({ students }) {
-  const [accidents, setAccidents] = useState([
-    { id: 'a1', student_id: 's6', occurred_at: new Date(Date.now() - 30 * 3600000).toISOString(), report_type: 'accidente_trabajo', description: 'Caída en el depósito del corralón. Golpe en rodilla izquierda.', sent_to_dge: false, sent_at: null },
-    { id: 'a2', student_id: 's14', occurred_at: new Date(Date.now() - 100 * 3600000).toISOString(), report_type: 'accidente_in_itinere', description: 'Accidente de tráfico en moto en el trayecto hacia la empresa.', sent_to_dge: true, sent_at: new Date(Date.now() - 90 * 3600000).toISOString() },
-  ])
+  const [accidents, setAccidents] = useState([])
   const [modal, setModal] = useState(false)
   const [form, setForm] = useState({ student_id: '', report_type: 'accidente_trabajo', occurred_at: '', description: '' })
   const [msg, setMsg] = useState('')
@@ -1247,19 +1244,20 @@ export default function AdminDashboard() {
         const rawStudents = (sRes.students || []).map(s => ({
           id: s.id,
           name: s.full_name,
-          teacher: s.teacher_id,
+          teacher: s.pasantia_id ? s.teacher_id : null,  // usado por MonitorTab
           company: s.company_name || '(Sin empresa asignada)',
           status: s.pasantia_status || 'none',
-          hours: parseFloat(s.total_hours) || 0,
-          visits: parseInt(s.visit_count) || 0,
+          hours: Number(s.total_hours) || 0,
+          visits: Number(s.visit_count) || 0,
           ice: s.ice === true || s.ice === 'true',
+          // campos extra para ABMTab
           user_id: s.user_id,
           email: s.email,
           school: s.school,
           grade: s.grade,
           teacher_name: s.teacher_name,
           company_name: s.company_name,
-          total_hours: parseFloat(s.total_hours) || 0,
+          total_hours: Number(s.total_hours) || 0,
         }))
         setStudentsRaw(rawStudents)
         // Reconstruir iceMap desde los datos del backend
