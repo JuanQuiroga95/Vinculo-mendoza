@@ -1,5 +1,5 @@
 // src/pages/AdminDashboard.jsx — v2.1 (clean rebuild)
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import {
   Users, Building2, Eye, Settings, Download, ShieldCheck,
   AlertTriangle, CheckCircle, Clock, Bell, Plus,
