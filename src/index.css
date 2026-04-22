@@ -338,8 +338,9 @@ select.input option { background: var(--ink-soft); color: var(--cream); }
   background: rgba(0,0,0,0.75);
   backdrop-filter: blur(4px);
   z-index: 1000;
-  display: flex; align-items: center; justify-content: center;
+  display: flex; align-items: flex-start; justify-content: center;
   padding: var(--space-lg);
+  overflow-y: auto;
   animation: fadeIn 0.2s ease;
 }
 .modal {
@@ -351,6 +352,7 @@ select.input option { background: var(--ink-soft); color: var(--cream); }
   width: 100%;
   box-shadow: var(--shadow-lg);
   animation: fadeUp 0.3s ease;
+  margin: auto;
 }
 .modal-header {
   display: flex; justify-content: space-between; align-items: flex-start;
