@@ -658,14 +658,69 @@ export default function TeacherDashboard() {
 
         {tab === 'alumnos' && (
           <div style={{ animation: 'fadeUp 0.4s ease' }}>
-            <div className="dashboard-header">
-              <h2>Mis Alumnos</h2>
-              <p>{teacher?.school} · {students.length} alumnos registrados</p>
+            <div className="dashboard-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div>
+                <h2>Mis Alumnos</h2>
+                <p>{teacher?.school} · {students.length} alumnos registrados</p>
+              </div>
+              <button className="btn btn-primary btn-sm" onClick={() => { setForm({}); setModal('add_student') }}>
+                <Plus size={14} /> Agregar alumno
+              </button>
             </div>
             <StudentsTab students={students} teacher={teacher} onValidate={s => { setSelected(s); setModal('validate') }} />
           </div>
         )}
       </main>
+
+      {modal === 'add_student' && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModal(null)}>
+          <div className="modal" style={{ maxWidth: 500 }}>
+            <div className="modal-header">
+              <h3 style={{ color: 'var(--cream)', fontFamily: 'var(--font-display)' }}>Agregar alumno</h3>
+              <button onClick={() => setModal(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--smoke)' }}><X size={20} /></button>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {[
+                { key: 'full_name',   label: 'Apellido y Nombre *', placeholder: 'GARCIA, María' },
+                { key: 'email',       label: 'Email (usuario) *',   placeholder: 'mgarcia@gmail.com' },
+                { key: 'password',    label: 'Contraseña (vacío = auto)', placeholder: 'Dejar vacío para generar' },
+                { key: 'school',      label: 'Escuela',              placeholder: 'Ing. Ricardo Videla' },
+                { key: 'orientation', label: 'Orientación',          placeholder: 'Contabilidad' },
+                { key: 'grade',       label: 'Curso',                placeholder: '5to 3ra' },
+              ].map(f => (
+                <div key={f.key}>
+                  <label style={{ fontSize: '0.82rem', color: 'var(--smoke)', display: 'block', marginBottom: 5 }}>{f.label}</label>
+                  <input value={form[f.key] || ''} onChange={e => setForm(p => ({ ...p, [f.key]: e.target.value }))}
+                    placeholder={f.placeholder} type={f.key === 'password' ? 'password' : 'text'}
+                    style={{ width: '100%', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 8, padding: '9px 12px', color: 'var(--cream)', fontSize: '0.88rem' }} />
+                </div>
+              ))}
+              <div style={{ padding: '10px 14px', background: 'rgba(27,186,170,0.08)', border: '1px solid rgba(27,186,170,0.2)', borderRadius: 8, fontSize: '0.8rem', color: 'var(--teal)' }}>
+                El alumno quedará asignado a vos como docente tutor automáticamente.
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 18 }}>
+              <button className="btn btn-outline btn-sm" onClick={() => setModal(null)}>Cancelar</button>
+              <button className="btn btn-primary btn-sm" onClick={async () => {
+                try {
+                  const res = await fetch('/api/admin/users', {
+                    method: 'POST', headers: authHeader(),
+                    body: JSON.stringify({ type: 'student', ...form })
+                  })
+                  const data = await res.json()
+                  if (!res.ok) throw new Error(data.error)
+                  let m = '✓ Alumno creado correctamente'
+                  if (data.generated_password) m += ` · Contraseña: ${data.generated_password}`
+                  setMsg(m)
+                  setModal(null); setForm({}); loadData()
+                } catch (e) { setMsg('Error: ' + e.message) }
+              }} disabled={!form.full_name || !form.email}>
+                ✓ Crear alumno
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {modal === 'validate' && (
         <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModal(null)}>

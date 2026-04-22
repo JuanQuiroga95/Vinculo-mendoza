@@ -389,64 +389,19 @@ async function handleInit(req, res) {
                p.status, p.is_simulation, fg.total_score, fg.final_grade, s.id`;
     log.push('✅ View: pasantia_summary');
 
-    // ── USUARIOS DEMO ─────────────────────────────────────────────────────────
-    const hash = await bcrypt.hash('demo1234', 12);
-
-    // Alumno
-    const { rows: suRows } = await sql`
-      INSERT INTO users (email, password_hash, role) VALUES ('alumno@demo.com', ${hash}, 'student')
-      ON CONFLICT (email) DO UPDATE SET password_hash = ${hash} RETURNING id`;
-    const suId = suRows[0].id;
-    const { rows: exStu } = await sql`SELECT id FROM students WHERE user_id = ${suId}`;
-    if (!exStu.length) {
-      await sql`INSERT INTO students (user_id, full_name, school, orientation, grade, bio, location, interests)
-        VALUES (${suId}, 'Valentina Pérez', 'EMETA N°1 - Mendoza', 'Comunicación', '5to año',
-          'Me apasiona el diseño y la comunicación digital.', 'Capital', ARRAY['Diseño','Marketing'])`;
-    }
-    log.push('✅ Seed: alumno@demo.com / demo1234');
-
-    // Empresa
-    const { rows: cuRows } = await sql`
-      INSERT INTO users (email, password_hash, role) VALUES ('empresa@demo.com', ${hash}, 'company')
-      ON CONFLICT (email) DO UPDATE SET password_hash = ${hash} RETURNING id`;
-    const cuId = cuRows[0].id;
-    const { rows: exComp } = await sql`SELECT id FROM companies WHERE user_id = ${cuId}`;
-    if (!exComp.length) {
-      const { rows: ncRows } = await sql`INSERT INTO companies (user_id, company_name, sector, location, contact_name, verified)
-        VALUES (${cuId}, 'Agencia Digital Mendoza', 'Tecnología', 'Capital', 'Carlos Rivas', true) RETURNING id`;
-      const compId = ncRows[0].id;
-      await sql`INSERT INTO vacancies (company_id, title, description, orientation_required, hours_per_week, location, tags)
-        VALUES (${compId}, 'Pasante de Community Management', 'Apoyo en gestión de redes sociales.', 'Comunicación', 15, 'Capital', ARRAY['Marketing','Redes'])`;
-    }
-    log.push('✅ Seed: empresa@demo.com / demo1234');
-
-    // Docente
-    const { rows: tuRows } = await sql`
-      INSERT INTO users (email, password_hash, role) VALUES ('docente@demo.com', ${hash}, 'teacher')
-      ON CONFLICT (email) DO UPDATE SET password_hash = ${hash} RETURNING id`;
-    const tuId = tuRows[0].id;
-    const { rows: exTea } = await sql`SELECT id FROM teachers WHERE user_id = ${tuId}`;
-    if (!exTea.length) {
-      await sql`INSERT INTO teachers (user_id, full_name, school, subject)
-        VALUES (${tuId}, 'Prof. María González', 'EMETA N°1 - Mendoza', 'Proyecto Vocacional')`;
-    }
-    log.push('✅ Seed: docente@demo.com / demo1234');
-
-    // Admin
-    await sql`INSERT INTO users (email, password_hash, role) VALUES ('admin@demo.com', ${hash}, 'admin')
-      ON CONFLICT (email) DO UPDATE SET password_hash = ${hash}`;
-    log.push('✅ Seed: admin@demo.com / demo1234');
+    // ── USUARIO ADMIN ──────────────────────────────────────────────────────────
+    const adminHash = await bcrypt.hash('VinculoVid26', 12);
+    await sql`
+      INSERT INTO users (email, password_hash, role)
+      VALUES ('Videla4012', ${adminHash}, 'admin')
+      ON CONFLICT (email) DO UPDATE SET password_hash = ${adminHash}`;
+    log.push('✅ Admin: Videla4012 / VinculoVid26');
 
     return jsonResponse(res, 200, {
       ok: true,
       message: '🎉 Base de datos inicializada correctamente (v2)',
       steps: log,
-      demo_users: [
-        { role: 'student',  email: 'alumno@demo.com',  password: 'demo1234' },
-        { role: 'company',  email: 'empresa@demo.com', password: 'demo1234' },
-        { role: 'teacher',  email: 'docente@demo.com', password: 'demo1234' },
-        { role: 'admin',    email: 'admin@demo.com',   password: 'demo1234' },
-      ]
+      admin: { email: 'Videla4012', password: 'VinculoVid26' }
     });
   } catch (err) {
     console.error('Init error:', err);

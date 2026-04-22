@@ -52,6 +52,10 @@
       "destination": "/api/admin/import"
     },
     {
+      "source": "/api/admin/users",
+      "destination": "/api/admin/users"
+    },
+    {
       "source": "/api/(.*)",
       "destination": "/api/$1"
     },

@@ -148,12 +148,288 @@ const TABS = [
   { id: 'monitor',    label: 'Monitor Global', icon: BarChart3 },
   { id: 'ice',        label: 'Control ICE',    icon: Lock },
   { id: 'siniestros', label: 'Siniestros',     icon: AlertTriangle },
+  { id: 'abm',        label: 'Usuarios',       icon: UserPlus },
   { id: 'teachers',   label: 'Docentes',       icon: Users },
   { id: 'companies',  label: 'Empresas',       icon: Building2 },
   { id: 'import',     label: 'Importar datos', icon: Upload },
   { id: 'settings',   label: 'Configuración',  icon: Settings },
   { id: 'export',     label: 'Exportar GEM',   icon: Download },
 ]
+
+
+// ─── ABM DE USUARIOS ─────────────────────────────────────────────────────────
+function ABMTab() {
+  const [section, setSection] = useState('students')
+  const [list, setList] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [modal, setModal] = useState(null) // 'add_student' | 'add_teacher' | 'add_company' | 'confirm_delete'
+  const [form, setForm] = useState({})
+  const [deleteTarget, setDeleteTarget] = useState(null)
+  const [msg, setMsg] = useState('')
+  const [teachers, setTeachers] = useState([])
+  const [companies, setCompanies] = useState([])
+
+  useEffect(() => { loadList() }, [section])
+  useEffect(() => {
+    // Cargar docentes y empresas para el select de asignación
+    fetch('/api/admin/users?type=teachers', { headers: authHeaders() }).then(r => r.json()).then(d => setTeachers(d.teachers || [])).catch(() => {})
+    fetch('/api/admin/users?type=companies', { headers: authHeaders() }).then(r => r.json()).then(d => setCompanies(d.companies || [])).catch(() => {})
+  }, [])
+
+  async function loadList() {
+    setLoading(true)
+    try {
+      const data = await fetch(`/api/admin/users?type=${section}`, { headers: authHeaders() }).then(r => r.json())
+      setList(data.students || data.teachers || data.companies || [])
+    } catch { setList([]) }
+    finally { setLoading(false) }
+  }
+
+  async function handleCreate() {
+    setMsg('')
+    try {
+      const res = await fetch('/api/admin/users', {
+        method: 'POST', headers: authHeaders(),
+        body: JSON.stringify({ type: section === 'students' ? 'student' : section === 'teachers' ? 'teacher' : 'company', ...form })
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error)
+      let msg = `✓ ${section === 'students' ? 'Alumno' : section === 'teachers' ? 'Docente' : 'Empresa'} creado`
+      if (data.generated_password) msg += ` · Contraseña generada: ${data.generated_password}`
+      setMsg(msg)
+      setModal(null); setForm({}); loadList()
+    } catch (e) { setMsg('Error: ' + e.message) }
+  }
+
+  async function handleDelete() {
+    try {
+      const res = await fetch('/api/admin/users', {
+        method: 'DELETE', headers: authHeaders(),
+        body: JSON.stringify({ user_id: deleteTarget.user_id })
+      })
+      if (!res.ok) throw new Error('Error al eliminar')
+      setMsg(`✓ Usuario eliminado`)
+      setDeleteTarget(null); setModal(null); loadList()
+    } catch (e) { setMsg('Error: ' + e.message) }
+  }
+
+  const sectionConfig = {
+    students:  { label: 'Alumnos',  addLabel: 'Nuevo alumno',  icon: Users },
+    teachers:  { label: 'Docentes', addLabel: 'Nuevo docente', icon: Users },
+    companies: { label: 'Empresas', addLabel: 'Nueva empresa', icon: Building2 },
+  }
+
+  const FIELDS = {
+    students: [
+      { key: 'full_name',   label: 'Apellido y Nombre *', placeholder: 'GARCIA, María' },
+      { key: 'email',       label: 'Email (usuario) *',   placeholder: 'mgarcia@gmail.com' },
+      { key: 'password',    label: 'Contraseña (vacío = auto)', placeholder: 'Dejar vacío para generar' },
+      { key: 'school',      label: 'Escuela',             placeholder: 'Ing. Ricardo Videla' },
+      { key: 'orientation', label: 'Orientación',         placeholder: 'Contabilidad' },
+      { key: 'grade',       label: 'Curso',               placeholder: '5to 3ra' },
+      { key: 'location',    label: 'Localidad',           placeholder: 'Luján de Cuyo' },
+    ],
+    teachers: [
+      { key: 'full_name', label: 'Apellido y Nombre *', placeholder: 'MARTIN, Cecilia' },
+      { key: 'email',     label: 'Email (usuario) *',   placeholder: 'cmartin@escola.edu.ar' },
+      { key: 'password',  label: 'Contraseña (vacío = auto)', placeholder: 'Dejar vacío para generar' },
+      { key: 'school',    label: 'Escuela',             placeholder: 'Ing. Ricardo Videla' },
+      { key: 'subject',   label: 'Materia',             placeholder: 'Proyecto Vocacional' },
+    ],
+    companies: [
+      { key: 'company_name',  label: 'Razón social *',  placeholder: 'Ferretería Silvestrini' },
+      { key: 'email',         label: 'Email',           placeholder: 'contacto@empresa.com' },
+      { key: 'cuit',          label: 'CUIT',            placeholder: '30712345671' },
+      { key: 'sector',        label: 'Sector',          placeholder: 'Comercio' },
+      { key: 'contact_name',  label: 'Referente',       placeholder: 'Víctor Silvestrini' },
+      { key: 'location',      label: 'Localidad',       placeholder: 'Luján de Cuyo' },
+    ],
+  }
+
+  return (
+    <div>
+      {msg && (
+        <div className={`alert ${msg.includes('✓') ? 'alert-success' : 'alert-error'}`} style={{ marginBottom: 20 }} onClick={() => setMsg('')}>
+          {msg} <X size={14} style={{ marginLeft: 'auto', cursor: 'pointer' }} />
+        </div>
+      )}
+
+      {/* Selector de sección */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 24 }}>
+        {Object.entries(sectionConfig).map(([key, cfg]) => (
+          <button key={key} onClick={() => { setSection(key); setMsg('') }}
+            style={{ padding: '9px 20px', borderRadius: 10, border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: '0.88rem', background: section === key ? 'var(--wine)' : 'rgba(255,255,255,0.06)', color: section === key ? 'white' : 'var(--smoke)' }}>
+            {cfg.label}
+          </button>
+        ))}
+        <button onClick={() => { setForm({}); setModal('add') }}
+          style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6, padding: '9px 18px', borderRadius: 10, border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: '0.88rem', background: 'var(--teal)', color: 'var(--ink)' }}>
+          <Plus size={15} /> {sectionConfig[section].addLabel}
+        </button>
+      </div>
+
+      {/* Tabla */}
+      {loading
+        ? <div style={{ textAlign: 'center', padding: 50, color: 'var(--smoke)' }}>Cargando…</div>
+        : (
+          <div style={{ background: 'var(--ink-soft)', border: '1px solid rgba(250,245,237,0.08)', borderRadius: 16, overflow: 'hidden' }}>
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.84rem' }}>
+                <thead>
+                  <tr style={{ background: 'rgba(250,245,237,0.04)' }}>
+                    {section === 'students' && ['Alumno/a', 'Email', 'Escuela', 'Curso', 'Docente tutor', 'Empresa', 'Horas', 'ICE', ''].map(h => (
+                      <th key={h} style={{ padding: '12px 14px', textAlign: 'left', color: 'var(--smoke)', fontWeight: 600, whiteSpace: 'nowrap' }}>{h}</th>
+                    ))}
+                    {section === 'teachers' && ['Docente', 'Email', 'Escuela', 'Materia', 'Alumnos', 'Visitas', ''].map(h => (
+                      <th key={h} style={{ padding: '12px 14px', textAlign: 'left', color: 'var(--smoke)', fontWeight: 600, whiteSpace: 'nowrap' }}>{h}</th>
+                    ))}
+                    {section === 'companies' && ['Empresa', 'Email', 'CUIT', 'Sector', 'Referente', 'Alumnos', 'Verificada', ''].map(h => (
+                      <th key={h} style={{ padding: '12px 14px', textAlign: 'left', color: 'var(--smoke)', fontWeight: 600, whiteSpace: 'nowrap' }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {list.length === 0 && (
+                    <tr><td colSpan={8} style={{ padding: '40px', textAlign: 'center', color: 'var(--smoke)' }}>No hay registros todavía.</td></tr>
+                  )}
+                  {section === 'students' && list.map((s, i) => (
+                    <tr key={s.id} style={{ borderTop: '1px solid rgba(250,245,237,0.05)', background: i%2===0?'transparent':'rgba(250,245,237,0.02)' }}>
+                      <td style={{ padding: '10px 14px', color: 'var(--cream)', fontWeight: 500 }}>{s.full_name}</td>
+                      <td style={{ padding: '10px 14px', color: 'var(--smoke)', fontSize: '0.8rem' }}>{s.email}</td>
+                      <td style={{ padding: '10px 14px', color: 'var(--smoke)', fontSize: '0.8rem' }}>{s.school || '—'}</td>
+                      <td style={{ padding: '10px 14px', color: 'var(--smoke)', fontSize: '0.8rem' }}>{s.grade || '—'}</td>
+                      <td style={{ padding: '10px 14px', color: 'var(--smoke)', fontSize: '0.8rem' }}>{s.teacher_name || '—'}</td>
+                      <td style={{ padding: '10px 14px', color: 'var(--smoke)', fontSize: '0.8rem' }}>{s.company_name || '—'}</td>
+                      <td style={{ padding: '10px 14px', color: s.total_hours >= 100 ? '#4ade80' : 'var(--smoke)' }}>{s.total_hours || 0}hs</td>
+                      <td style={{ padding: '10px 14px' }}>{s.ice ? <span style={{ color: '#f87171', fontSize: '0.8rem', fontWeight: 700 }}>● ICE</span> : <span style={{ color: 'var(--smoke)' }}>—</span>}</td>
+                      <td style={{ padding: '10px 14px' }}>
+                        <button onClick={() => { setDeleteTarget({ user_id: s.user_id, name: s.full_name }); setModal('confirm_delete') }}
+                          style={{ background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.3)', borderRadius: 6, padding: '4px 10px', color: '#f87171', cursor: 'pointer', fontSize: '0.78rem' }}>
+                          Eliminar
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                  {section === 'teachers' && list.map((t, i) => (
+                    <tr key={t.id} style={{ borderTop: '1px solid rgba(250,245,237,0.05)', background: i%2===0?'transparent':'rgba(250,245,237,0.02)' }}>
+                      <td style={{ padding: '10px 14px', color: 'var(--cream)', fontWeight: 500 }}>{t.full_name}</td>
+                      <td style={{ padding: '10px 14px', color: 'var(--smoke)', fontSize: '0.8rem' }}>{t.email}</td>
+                      <td style={{ padding: '10px 14px', color: 'var(--smoke)', fontSize: '0.8rem' }}>{t.school || '—'}</td>
+                      <td style={{ padding: '10px 14px', color: 'var(--smoke)', fontSize: '0.8rem' }}>{t.subject || '—'}</td>
+                      <td style={{ padding: '10px 14px', color: 'var(--smoke)' }}>{t.student_count || 0}</td>
+                      <td style={{ padding: '10px 14px', color: t.visit_count === 0 && t.student_count > 0 ? '#f87171' : 'var(--smoke)' }}>{t.visit_count || 0}</td>
+                      <td style={{ padding: '10px 14px' }}>
+                        <button onClick={() => { setDeleteTarget({ user_id: t.user_id, name: t.full_name }); setModal('confirm_delete') }}
+                          style={{ background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.3)', borderRadius: 6, padding: '4px 10px', color: '#f87171', cursor: 'pointer', fontSize: '0.78rem' }}>
+                          Eliminar
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                  {section === 'companies' && list.map((c, i) => (
+                    <tr key={c.id} style={{ borderTop: '1px solid rgba(250,245,237,0.05)', background: i%2===0?'transparent':'rgba(250,245,237,0.02)' }}>
+                      <td style={{ padding: '10px 14px', color: 'var(--cream)', fontWeight: 500 }}>{c.company_name}</td>
+                      <td style={{ padding: '10px 14px', color: 'var(--smoke)', fontSize: '0.8rem' }}>{c.email}</td>
+                      <td style={{ padding: '10px 14px', color: 'var(--smoke)', fontFamily: 'monospace', fontSize: '0.8rem' }}>{c.cuit || '—'}</td>
+                      <td style={{ padding: '10px 14px', color: 'var(--smoke)', fontSize: '0.8rem' }}>{c.sector || '—'}</td>
+                      <td style={{ padding: '10px 14px', color: 'var(--smoke)', fontSize: '0.8rem' }}>{c.contact_name || '—'}</td>
+                      <td style={{ padding: '10px 14px', color: 'var(--smoke)' }}>{c.student_count || 0}</td>
+                      <td style={{ padding: '10px 14px' }}>{c.verified ? <span style={{ color: '#4ade80', fontSize: '0.8rem' }}>✅</span> : <span style={{ color: '#f59e0b', fontSize: '0.8rem' }}>⏳</span>}</td>
+                      <td style={{ padding: '10px 14px' }}>
+                        <button onClick={() => { setDeleteTarget({ user_id: c.user_id, name: c.company_name }); setModal('confirm_delete') }}
+                          style={{ background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.3)', borderRadius: 6, padding: '4px 10px', color: '#f87171', cursor: 'pointer', fontSize: '0.78rem' }}>
+                          Eliminar
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )
+      }
+
+      {/* Modal agregar */}
+      {modal === 'add' && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModal(null)}>
+          <div className="modal" style={{ maxWidth: 520 }}>
+            <div className="modal-header">
+              <h3 style={{ color: 'var(--cream)', fontFamily: 'var(--font-display)' }}>
+                {sectionConfig[section].addLabel}
+              </h3>
+              <button onClick={() => setModal(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--smoke)' }}><X size={20} /></button>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {FIELDS[section].map(f => (
+                <div key={f.key}>
+                  <label style={{ fontSize: '0.82rem', color: 'var(--smoke)', display: 'block', marginBottom: 5 }}>{f.label}</label>
+                  <input value={form[f.key] || ''} onChange={e => setForm(p => ({ ...p, [f.key]: e.target.value }))}
+                    placeholder={f.placeholder} type={f.key === 'password' ? 'password' : 'text'}
+                    style={{ width: '100%', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 8, padding: '9px 12px', color: 'var(--cream)', fontSize: '0.88rem' }} />
+                </div>
+              ))}
+              {/* Si es alumno, selector de docente tutor y empresa */}
+              {section === 'students' && (
+                <>
+                  <div>
+                    <label style={{ fontSize: '0.82rem', color: 'var(--smoke)', display: 'block', marginBottom: 5 }}>Docente tutor asignado</label>
+                    <select value={form.teacher_id || ''} onChange={e => setForm(p => ({ ...p, teacher_id: e.target.value }))}
+                      style={{ width: '100%', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 8, padding: '9px 12px', color: 'var(--cream)', fontSize: '0.88rem' }}>
+                      <option value="">Sin asignar</option>
+                      {teachers.map(t => <option key={t.id} value={t.id}>{t.full_name}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '0.82rem', color: 'var(--smoke)', display: 'block', marginBottom: 5 }}>Empresa asignada</label>
+                    <select value={form.company_id || ''} onChange={e => setForm(p => ({ ...p, company_id: e.target.value }))}
+                      style={{ width: '100%', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 8, padding: '9px 12px', color: 'var(--cream)', fontSize: '0.88rem' }}>
+                      <option value="">Sin asignar</option>
+                      {companies.map(c => <option key={c.id} value={c.id}>{c.company_name}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '0.82rem', color: 'var(--smoke)', display: 'block', marginBottom: 5 }}>Fecha inicio pasantía</label>
+                    <input type="date" value={form.start_date || ''} onChange={e => setForm(p => ({ ...p, start_date: e.target.value }))}
+                      style={{ width: '100%', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 8, padding: '9px 12px', color: 'var(--cream)', fontSize: '0.88rem' }} />
+                  </div>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', fontSize: '0.88rem', color: 'var(--muted)' }}>
+                    <input type="checkbox" checked={!!form.is_simulation} onChange={e => setForm(p => ({ ...p, is_simulation: e.target.checked }))} />
+                    Proyecto de simulación (sin empresa real)
+                  </label>
+                </>
+              )}
+            </div>
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 20 }}>
+              <button className="btn btn-outline btn-sm" onClick={() => setModal(null)}>Cancelar</button>
+              <button className="btn btn-teal btn-sm" onClick={handleCreate}>✓ Crear</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal confirmar eliminar */}
+      {modal === 'confirm_delete' && deleteTarget && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModal(null)}>
+          <div className="modal" style={{ maxWidth: 420 }}>
+            <h3 style={{ color: '#f87171', fontFamily: 'var(--font-display)', marginBottom: 16 }}>⚠ Confirmar eliminación</h3>
+            <p style={{ fontSize: '0.9rem', marginBottom: 8 }}>¿Estás seguro de que querés eliminar a:</p>
+            <p style={{ fontSize: '1rem', color: 'var(--cream)', fontWeight: 600, marginBottom: 20 }}>{deleteTarget.name}</p>
+            <div style={{ padding: '10px 14px', background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.3)', borderRadius: 10, marginBottom: 20, fontSize: '0.82rem', color: '#fca5a5' }}>
+              Esta acción eliminará al usuario y todos sus datos asociados (pasantías, asistencias, etc.). No se puede deshacer.
+            </div>
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+              <button className="btn btn-outline btn-sm" onClick={() => { setModal(null); setDeleteTarget(null) }}>Cancelar</button>
+              <button onClick={handleDelete} style={{ padding: '8px 18px', borderRadius: 8, border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem', background: '#f87171', color: 'white' }}>
+                Eliminar definitivamente
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
 
 // ─── MONITOR ──────────────────────────────────────────────────────────────────
 function MonitorTab({ students, teachers }) {
@@ -1018,6 +1294,7 @@ export default function AdminDashboard() {
           ))}
         </div>
         <div style={{ animation: 'fadeUp 0.35s ease' }}>
+          {tab === 'abm'        && <ABMTab />}
           {tab === 'monitor'    && <MonitorTab students={students} teachers={teachers} />}
           {tab === 'ice'        && <IceTab students={students} iceMap={iceMap} onToggleIce={toggleIce} />}
           {tab === 'siniestros' && <SiniestrosTab students={students} />}
