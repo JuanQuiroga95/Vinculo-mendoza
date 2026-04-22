@@ -393,45 +393,48 @@ async function handleInit(req, res) {
     const hash = await bcrypt.hash('demo1234', 12);
 
     // Alumno
-    const { rows: [su] } = await sql`
+    const { rows: suRows } = await sql`
       INSERT INTO users (email, password_hash, role) VALUES ('alumno@demo.com', ${hash}, 'student')
       ON CONFLICT (email) DO UPDATE SET password_hash = ${hash} RETURNING id`;
-    await sql`
-      INSERT INTO students (user_id, full_name, school, orientation, grade, bio, location, interests)
-      VALUES (${su.id}, 'Valentina Pérez', 'EMETA N°1 - Mendoza', 'Comunicación', '5to año',
-        'Me apasiona el diseño y la comunicación digital.', 'Capital', ARRAY['Diseño','Marketing'])
-      ON CONFLICT (user_id) DO NOTHING`;
+    const suId = suRows[0].id;
+    const { rows: exStu } = await sql`SELECT id FROM students WHERE user_id = ${suId}`;
+    if (!exStu.length) {
+      await sql`INSERT INTO students (user_id, full_name, school, orientation, grade, bio, location, interests)
+        VALUES (${suId}, 'Valentina Pérez', 'EMETA N°1 - Mendoza', 'Comunicación', '5to año',
+          'Me apasiona el diseño y la comunicación digital.', 'Capital', ARRAY['Diseño','Marketing'])`;
+    }
     log.push('✅ Seed: alumno@demo.com / demo1234');
 
     // Empresa
-    const { rows: [cu] } = await sql`
+    const { rows: cuRows } = await sql`
       INSERT INTO users (email, password_hash, role) VALUES ('empresa@demo.com', ${hash}, 'company')
       ON CONFLICT (email) DO UPDATE SET password_hash = ${hash} RETURNING id`;
-    const { rows: [comp] } = await sql`
-      INSERT INTO companies (user_id, company_name, sector, location, contact_name, verified)
-      VALUES (${cu.id}, 'Agencia Digital Mendoza', 'Tecnología', 'Capital', 'Carlos Rivas', true)
-      ON CONFLICT (user_id) DO NOTHING RETURNING id`;
-    if (comp) {
+    const cuId = cuRows[0].id;
+    const { rows: exComp } = await sql`SELECT id FROM companies WHERE user_id = ${cuId}`;
+    if (!exComp.length) {
+      const { rows: ncRows } = await sql`INSERT INTO companies (user_id, company_name, sector, location, contact_name, verified)
+        VALUES (${cuId}, 'Agencia Digital Mendoza', 'Tecnología', 'Capital', 'Carlos Rivas', true) RETURNING id`;
+      const compId = ncRows[0].id;
       await sql`INSERT INTO vacancies (company_id, title, description, orientation_required, hours_per_week, location, tags)
-        VALUES (${comp.id}, 'Pasante de Community Management', 'Apoyo en gestión de redes sociales.', 'Comunicación', 15, 'Capital', ARRAY['Marketing','Redes'])
-        ON CONFLICT DO NOTHING`;
+        VALUES (${compId}, 'Pasante de Community Management', 'Apoyo en gestión de redes sociales.', 'Comunicación', 15, 'Capital', ARRAY['Marketing','Redes'])`;
     }
     log.push('✅ Seed: empresa@demo.com / demo1234');
 
     // Docente
-    const { rows: [tu] } = await sql`
+    const { rows: tuRows } = await sql`
       INSERT INTO users (email, password_hash, role) VALUES ('docente@demo.com', ${hash}, 'teacher')
       ON CONFLICT (email) DO UPDATE SET password_hash = ${hash} RETURNING id`;
-    await sql`
-      INSERT INTO teachers (user_id, full_name, school, subject)
-      VALUES (${tu.id}, 'Prof. María González', 'EMETA N°1 - Mendoza', 'Proyecto Vocacional')
-      ON CONFLICT (user_id) DO NOTHING`;
+    const tuId = tuRows[0].id;
+    const { rows: exTea } = await sql`SELECT id FROM teachers WHERE user_id = ${tuId}`;
+    if (!exTea.length) {
+      await sql`INSERT INTO teachers (user_id, full_name, school, subject)
+        VALUES (${tuId}, 'Prof. María González', 'EMETA N°1 - Mendoza', 'Proyecto Vocacional')`;
+    }
     log.push('✅ Seed: docente@demo.com / demo1234');
 
     // Admin
-    const { rows: [au] } = await sql`
-      INSERT INTO users (email, password_hash, role) VALUES ('admin@demo.com', ${hash}, 'admin')
-      ON CONFLICT (email) DO UPDATE SET password_hash = ${hash} RETURNING id`;
+    await sql`INSERT INTO users (email, password_hash, role) VALUES ('admin@demo.com', ${hash}, 'admin')
+      ON CONFLICT (email) DO UPDATE SET password_hash = ${hash}`;
     log.push('✅ Seed: admin@demo.com / demo1234');
 
     return jsonResponse(res, 200, {
