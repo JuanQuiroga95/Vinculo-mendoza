@@ -12,7 +12,7 @@ async function handleList(req, res, auth) {
   const { type } = req.query // students | teachers | companies
 
   if (type === 'students') {
-    const rows = await sql`
+    const { rows } = await sql`
       SELECT s.*, u.email, u.role,
         t.full_name AS teacher_name,
         p.id AS pasantia_id, p.status AS pasantia_status,
@@ -39,7 +39,7 @@ async function handleList(req, res, auth) {
 
   if (type === 'teachers') {
     if (auth.role !== 'admin') return res.status(403).json({ error: 'Solo admin' })
-    const rows = await sql`
+    const { rows } = await sql`
       SELECT t.*, u.email, u.role,
         COUNT(DISTINCT p.id) AS student_count,
         COUNT(DISTINCT v.id) AS visit_count
@@ -55,7 +55,7 @@ async function handleList(req, res, auth) {
 
   if (type === 'companies') {
     if (auth.role !== 'admin') return res.status(403).json({ error: 'Solo admin' })
-    const rows = await sql`
+    const { rows } = await sql`
       SELECT c.*, u.email,
         COUNT(DISTINCT p.id) AS student_count
       FROM companies c

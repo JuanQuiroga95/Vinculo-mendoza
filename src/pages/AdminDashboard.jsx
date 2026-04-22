@@ -1229,15 +1229,76 @@ function ExportTab({ students, teachers }) {
 export default function AdminDashboard() {
   const navigate = useNavigate()
   const [tab, setTab] = useState('monitor')
-  const [teachers, setTeachers] = useState(DEMO_TEACHERS)
-  const [companies, setCompanies] = useState(DEMO_COMPANIES)
-  const [iceMap, setIceMap] = useState(INITIAL_ICE)
+  const [teachers, setTeachers] = useState([])
+  const [companies, setCompanies] = useState([])
+  const [studentsRaw, setStudentsRaw] = useState([])
+  const [iceMap, setIceMap] = useState({})
+  const [loadingDashboard, setLoadingDashboard] = useState(true)
 
-  const students = useMemo(() => DEMO_STUDENTS_BASE.map(s => ({
+  useEffect(() => {
+    async function loadAll() {
+      setLoadingDashboard(true)
+      try {
+        const [sRes, tRes, cRes] = await Promise.all([
+          fetch('/api/admin/users?type=students',  { headers: authHeaders() }).then(r => r.json()),
+          fetch('/api/admin/users?type=teachers',  { headers: authHeaders() }).then(r => r.json()),
+          fetch('/api/admin/users?type=companies', { headers: authHeaders() }).then(r => r.json()),
+        ])
+        const rawStudents = (sRes.students || []).map(s => ({
+          id: s.id,
+          name: s.full_name,
+          teacher: s.teacher_id,
+          company: s.company_name || '(Sin empresa asignada)',
+          status: s.pasantia_status || 'none',
+          hours: parseFloat(s.total_hours) || 0,
+          visits: parseInt(s.visit_count) || 0,
+          ice: s.ice === true || s.ice === 'true',
+          user_id: s.user_id,
+          email: s.email,
+          school: s.school,
+          grade: s.grade,
+          teacher_name: s.teacher_name,
+          company_name: s.company_name,
+          total_hours: parseFloat(s.total_hours) || 0,
+        }))
+        setStudentsRaw(rawStudents)
+        // Reconstruir iceMap desde los datos del backend
+        const ice = {}
+        rawStudents.filter(s => s.ice).forEach(s => { ice[s.id] = { blocked: true } })
+        setIceMap(ice)
+        setTeachers((tRes.teachers || []).map(t => ({
+          id: t.id, name: t.full_name, email: t.email,
+          school: t.school, subject: t.subject,
+          students: parseInt(t.student_count) || 0,
+          visits: parseInt(t.visit_count) || 0,
+          pending: 0,
+          user_id: t.user_id,
+          full_name: t.full_name,
+          student_count: parseInt(t.student_count) || 0,
+          visit_count: parseInt(t.visit_count) || 0,
+        })))
+        setCompanies((cRes.companies || []).map(c => ({
+          id: c.id, name: c.company_name, company_name: c.company_name,
+          cuit: c.cuit || '', email: c.email, sector: c.sector || '',
+          contact: c.contact_name || '', contact_name: c.contact_name || '',
+          students: parseInt(c.student_count) || 0,
+          student_count: parseInt(c.student_count) || 0,
+          verified: c.verified, user_id: c.user_id,
+        })))
+      } catch (e) {
+        console.error('Error cargando dashboard:', e)
+      } finally {
+        setLoadingDashboard(false)
+      }
+    }
+    loadAll()
+  }, [])
+
+  const students = useMemo(() => studentsRaw.map(s => ({
     ...s,
     ice: !!iceMap[s.id]?.blocked,
     status: iceMap[s.id]?.blocked ? 'blocked' : s.status,
-  })), [iceMap])
+  })), [studentsRaw, iceMap])
 
   async function toggleIce(studentId, block, reason) {
     setIceMap(prev => ({
@@ -1284,26 +1345,34 @@ export default function AdminDashboard() {
         </div>
       </div>
       <div style={{ maxWidth: 1280, margin: '0 auto', padding: 24 }}>
-        <div style={{ display: 'flex', gap: 4, marginBottom: 28, background: 'rgba(250,245,237,0.04)', borderRadius: 12, padding: 4, flexWrap: 'wrap' }}>
-          {TABS.map(t => (
-            <button key={t.id} onClick={() => setTab(t.id)} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 18px', borderRadius: 9, border: 'none', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600, transition: 'all 0.15s', background: tab === t.id ? 'var(--wine)' : 'transparent', color: tab === t.id ? 'white' : 'var(--smoke)', position: 'relative' }}>
-              <t.icon size={14} />
-              {t.label}
-              {t.id === 'ice' && iceCount > 0 && <span style={{ position: 'absolute', top: 4, right: 4, width: 8, height: 8, borderRadius: '50%', background: '#f87171' }} />}
-            </button>
-          ))}
-        </div>
-        <div style={{ animation: 'fadeUp 0.35s ease' }}>
-          {tab === 'abm'        && <ABMTab />}
-          {tab === 'monitor'    && <MonitorTab students={students} teachers={teachers} />}
-          {tab === 'ice'        && <IceTab students={students} iceMap={iceMap} onToggleIce={toggleIce} />}
-          {tab === 'siniestros' && <SiniestrosTab students={students} />}
-          {tab === 'teachers'   && <TeachersTab teachers={teachers} setTeachers={setTeachers} />}
-          {tab === 'companies'  && <CompaniesTab companies={companies} setCompanies={setCompanies} />}
-          {tab === 'import'     && <ImportTab />}
-          {tab === 'settings'   && <SettingsTab />}
-          {tab === 'export'     && <ExportTab students={students} teachers={teachers} />}
-        </div>
+        {loadingDashboard ? (
+          <div style={{ textAlign: 'center', padding: '80px 0', color: 'var(--smoke)', fontSize: '0.95rem' }}>
+            Cargando datos…
+          </div>
+        ) : (
+          <>
+            <div style={{ display: 'flex', gap: 4, marginBottom: 28, background: 'rgba(250,245,237,0.04)', borderRadius: 12, padding: 4, flexWrap: 'wrap' }}>
+              {TABS.map(t => (
+                <button key={t.id} onClick={() => setTab(t.id)} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 18px', borderRadius: 9, border: 'none', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600, transition: 'all 0.15s', background: tab === t.id ? 'var(--wine)' : 'transparent', color: tab === t.id ? 'white' : 'var(--smoke)', position: 'relative' }}>
+                  <t.icon size={14} />
+                  {t.label}
+                  {t.id === 'ice' && iceCount > 0 && <span style={{ position: 'absolute', top: 4, right: 4, width: 8, height: 8, borderRadius: '50%', background: '#f87171' }} />}
+                </button>
+              ))}
+            </div>
+            <div style={{ animation: 'fadeUp 0.35s ease' }}>
+              {tab === 'abm'        && <ABMTab />}
+              {tab === 'monitor'    && <MonitorTab students={students} teachers={teachers} />}
+              {tab === 'ice'        && <IceTab students={students} iceMap={iceMap} onToggleIce={toggleIce} />}
+              {tab === 'siniestros' && <SiniestrosTab students={students} />}
+              {tab === 'teachers'   && <TeachersTab teachers={teachers} setTeachers={setTeachers} />}
+              {tab === 'companies'  && <CompaniesTab companies={companies} setCompanies={setCompanies} />}
+              {tab === 'import'     && <ImportTab />}
+              {tab === 'settings'   && <SettingsTab />}
+              {tab === 'export'     && <ExportTab students={students} teachers={teachers} />}
+            </div>
+          </>
+        )}
       </div>
     </div>
   )
