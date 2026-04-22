@@ -9,7 +9,7 @@ async function handleLogin(req, res) {
     const { email, password } = req.body;
     if (!email || !password) return jsonResponse(res, 400, { error: 'Email y contraseña requeridos' });
 
-    const { rows } = await sql`SELECT * FROM users WHERE email = ${email.toLowerCase()} LIMIT 1`;
+    const { rows } = await sql`SELECT * FROM users WHERE LOWER(email) = ${email.toLowerCase()} LIMIT 1`;
     if (!rows.length) return jsonResponse(res, 401, { error: 'Credenciales incorrectas' });
 
     const user = rows[0];

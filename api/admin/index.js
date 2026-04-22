@@ -393,15 +393,15 @@ async function handleInit(req, res) {
     const adminHash = await bcrypt.hash('VinculoVid26', 12);
     await sql`
       INSERT INTO users (email, password_hash, role)
-      VALUES ('Videla4012', ${adminHash}, 'admin')
+      VALUES ('videla4012', ${adminHash}, 'admin')
       ON CONFLICT (email) DO UPDATE SET password_hash = ${adminHash}`;
-    log.push('✅ Admin: Videla4012 / VinculoVid26');
+    log.push('✅ Admin: videla4012 / VinculoVid26');
 
     return jsonResponse(res, 200, {
       ok: true,
       message: '🎉 Base de datos inicializada correctamente (v2)',
       steps: log,
-      admin: { email: 'Videla4012', password: 'VinculoVid26' }
+      admin: { email: 'videla4012', password: 'VinculoVid26' }
     });
   } catch (err) {
     console.error('Init error:', err);
