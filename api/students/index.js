@@ -161,6 +161,146 @@ async function handleAttendance(req, res, auth) {
   return res.status(405).json({ error: 'Método no permitido' });
 }
 
+// ── SELF-EVALUATION ────────────────────────────────────────────────────────────
+async function handleSelfEvaluation(req, res, auth) {
+  if (req.method === 'GET') {
+    try {
+      const { pasantia_id } = req.query;
+      if (!pasantia_id) return jsonResponse(res, 400, { error: 'pasantia_id requerido' });
+      
+      const { rows } = await sql`
+        SELECT * FROM self_evaluations 
+        WHERE pasantia_id = ${pasantia_id} 
+        LIMIT 1
+      `;
+      return jsonResponse(res, 200, rows[0] || {});
+    } catch (err) {
+      return jsonResponse(res, 500, { error: err.message });
+    }
+  }
+
+  if (req.method === 'POST') {
+    if (auth.role !== 'student') return jsonResponse(res, 403, { error: 'Solo alumnos' });
+    
+    try {
+      const { rows: st } = await sql`SELECT id FROM students WHERE user_id=${auth.userId} LIMIT 1`;
+      if (!st.length) return jsonResponse(res, 404, { error: 'Alumno no encontrado' });
+      
+      const b = req.body;
+      const { rows } = await sql`
+        INSERT INTO self_evaluations (
+          pasantia_id, student_id,
+          crit_puntualidad, crit_responsabilidad, crit_actitud, crit_relaciones,
+          crit_aprendizaje, crit_comunicacion, crit_presentacion, crit_normas,
+          que_aprendi, que_mejoraria, lo_mejor, lo_mas_dificil, status, submitted_at
+        ) VALUES (
+          ${b.pasantia_id}, ${st[0].id},
+          ${b.crit_puntualidad || null}, ${b.crit_responsabilidad || null}, ${b.crit_actitud || null}, ${b.crit_relaciones || null},
+          ${b.crit_aprendizaje || null}, ${b.crit_comunicacion || null}, ${b.crit_presentacion || null}, ${b.crit_normas || null},
+          ${b.que_aprendi || null}, ${b.que_mejoraria || null}, ${b.lo_mejor || null}, ${b.lo_mas_dificil || null},
+          ${b.status || 'borrador'}, ${b.status === 'enviada' ? new Date().toISOString() : null}
+        )
+        ON CONFLICT (pasantia_id) DO UPDATE SET
+          crit_puntualidad = EXCLUDED.crit_puntualidad,
+          crit_responsabilidad = EXCLUDED.crit_responsabilidad,
+          crit_actitud = EXCLUDED.crit_actitud,
+          crit_relaciones = EXCLUDED.crit_relaciones,
+          crit_aprendizaje = EXCLUDED.crit_aprendizaje,
+          crit_comunicacion = EXCLUDED.crit_comunicacion,
+          crit_presentacion = EXCLUDED.crit_presentacion,
+          crit_normas = EXCLUDED.crit_normas,
+          que_aprendi = EXCLUDED.que_aprendi,
+          que_mejoraria = EXCLUDED.que_mejoraria,
+          lo_mejor = EXCLUDED.lo_mejor,
+          lo_mas_dificil = EXCLUDED.lo_mas_dificil,
+          status = EXCLUDED.status,
+          submitted_at = EXCLUDED.submitted_at
+        RETURNING *
+      `;
+      return jsonResponse(res, 201, rows[0]);
+    } catch (err) {
+      return jsonResponse(res, 500, { error: err.message });
+    }
+  }
+
+  return jsonResponse(res, 404, { error: 'Not found' });
+}
+
+// ── AUTHORIZATION ──────────────────────────────────────────────────────────────
+async function handleAuthorization(req, res, auth) {
+  if (req.method === 'GET') {
+    try {
+      if (auth.role === 'student') {
+        const { rows: st } = await sql`SELECT id FROM students WHERE user_id=${auth.userId} LIMIT 1`;
+        if (!st.length) return jsonResponse(res, 404, { error: 'Alumno no encontrado' });
+        
+        const { rows } = await sql`SELECT * FROM family_authorizations WHERE student_id = ${st[0].id} LIMIT 1`;
+        return jsonResponse(res, 200, rows[0] || {});
+      } else {
+        const { student_id } = req.query;
+        if (!student_id) return jsonResponse(res, 400, { error: 'student_id requerido' });
+        const { rows } = await sql`SELECT * FROM family_authorizations WHERE student_id = ${student_id} LIMIT 1`;
+        return jsonResponse(res, 200, rows[0] || {});
+      }
+    } catch (err) {
+      return jsonResponse(res, 500, { error: err.message });
+    }
+  }
+
+  if (req.method === 'POST') {
+    if (auth.role !== 'student') return jsonResponse(res, 403, { error: 'Solo alumnos' });
+    
+    try {
+      const { rows: st } = await sql`SELECT id FROM students WHERE user_id=${auth.userId} LIMIT 1`;
+      if (!st.length) return jsonResponse(res, 404, { error: 'Alumno no encontrado' });
+      
+      const b = req.body;
+      const { rows } = await sql`
+        INSERT INTO family_authorizations (
+          student_id, parent_name, parent_dni, parent_relationship, parent_phone,
+          authorized, legal_text_accepted, status, signed_at
+        ) VALUES (
+          ${st[0].id}, ${b.parent_name}, ${b.parent_dni}, ${b.parent_relationship || 'madre/padre'}, ${b.parent_phone},
+          ${b.authorized || false}, ${b.legal_text_accepted || false}, 'completada', NOW()
+        )
+        ON CONFLICT (student_id) DO UPDATE SET
+          parent_name = EXCLUDED.parent_name,
+          parent_dni = EXCLUDED.parent_dni,
+          parent_relationship = EXCLUDED.parent_relationship,
+          parent_phone = EXCLUDED.parent_phone,
+          authorized = EXCLUDED.authorized,
+          legal_text_accepted = EXCLUDED.legal_text_accepted,
+          status = 'completada',
+          signed_at = NOW()
+        RETURNING *
+      `;
+      return jsonResponse(res, 201, rows[0]);
+    } catch (err) {
+      return jsonResponse(res, 500, { error: err.message });
+    }
+  }
+  
+  if (req.method === 'PUT') {
+    if (auth.role !== 'admin') return jsonResponse(res, 403, { error: 'Solo admin' });
+    try {
+      const { id, status } = req.body;
+      const { rows } = await sql`
+        UPDATE family_authorizations SET 
+          status = ${status}, 
+          validated_by = ${auth.userId},
+          validated_at = NOW()
+        WHERE id = ${id}
+        RETURNING *
+      `;
+      return jsonResponse(res, 200, rows[0]);
+    } catch (err) {
+      return jsonResponse(res, 500, { error: err.message });
+    }
+  }
+
+  return jsonResponse(res, 404, { error: 'Not found' });
+}
+
 // ── ROUTER ───────────────────────────────────────────────────────────────────
 export default async function handler(req, res) {
   handleCors(res);
@@ -169,12 +309,14 @@ export default async function handler(req, res) {
   const auth = requireAuth(req, res);
   if (!auth) return;
 
-  const resource = req.query._resource;
+  const resource = req.query._resource || req.query.action;
   if (resource === 'portfolio')  return handlePortfolio(req, res, auth);
   if (resource === 'logbook')    return handleLogbook(req, res, auth);
   if (resource === 'attendance') return handleAttendance(req, res, auth);
   if (resource === 'pasantia')   return handleActivePasantia(req, res, auth);
   if (resource === 'report')     return handleReport(req, res, auth);
+  if (resource === 'self-evaluation') return handleSelfEvaluation(req, res, auth);
+  if (resource === 'authorization') return handleAuthorization(req, res, auth);
 
   return jsonResponse(res, 400, { error: 'Recurso no reconocido' });
 }

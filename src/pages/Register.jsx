@@ -55,7 +55,7 @@ export default function Register() {
               <span style={{ color: 'var(--gold)', fontFamily: 'var(--font-display)', fontWeight: 700 }}>V</span>
             </div>
             <span style={{ fontFamily: 'var(--font-display)', fontSize: '1.3rem', color: 'var(--cream)' }}>
-              Vínculo <span style={{ color: 'var(--gold)' }}>Mendoza</span>
+              Vínculo <span style={{ color: 'var(--gold)' }}>Pasantías</span>
             </span>
           </Link>
 

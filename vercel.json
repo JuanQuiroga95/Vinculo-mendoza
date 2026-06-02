@@ -12,6 +12,18 @@
       "destination": "/api/auth?_action=register"
     },
     {
+      "source": "/api/students/self-evaluation",
+      "destination": "/api/students?_resource=self-evaluation"
+    },
+    {
+      "source": "/api/students/authorization",
+      "destination": "/api/students?_resource=authorization"
+    },
+    {
+      "source": "/api/teachers/checklist",
+      "destination": "/api/teachers?_resource=checklist"
+    },
+    {
       "source": "/api/students/portfolio",
       "destination": "/api/students?_resource=portfolio"
     },
@@ -28,6 +40,10 @@
       "destination": "/api/teachers?_resource=validations"
     },
     {
+      "source": "/api/grades",
+      "destination": "/api/teachers?_resource=grades"
+    },
+    {
       "source": "/api/teachers/visits",
       "destination": "/api/teachers?_resource=visits"
     },
@@ -38,6 +54,10 @@
     {
       "source": "/api/admin/init",
       "destination": "/api/admin?_resource=init"
+    },
+    {
+      "source": "/api/admin/notes",
+      "destination": "/api/admin?_resource=notes"
     },
     {
       "source": "/api/students/pasantia",

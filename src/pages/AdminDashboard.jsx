@@ -1331,7 +1331,7 @@ export default function AdminDashboard() {
               <span style={{ color: 'var(--gold)', fontFamily: 'var(--font-display)', fontWeight: 700 }}>V</span>
             </div>
             <div>
-              <span style={{ fontWeight: 700, color: 'var(--cream)' }}>Vínculo Mendoza</span>
+              <span style={{ fontWeight: 700, color: 'var(--cream)' }}>Vínculo Pasantías</span>
               <span style={{ marginLeft: 8, fontSize: '0.75rem', background: 'rgba(124,29,47,0.4)', border: '1px solid rgba(212,168,67,0.3)', borderRadius: 6, padding: '1px 8px', color: 'var(--gold)' }}>🛡 MASTER ADMIN</span>
             </div>
           </div>

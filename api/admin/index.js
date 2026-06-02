@@ -445,14 +445,52 @@ async function handleAccidents(req, res, user) {
   return res.status(405).json({ error: 'Método no permitido' });
 }
 
+// ── OFFICIAL NOTES ─────────────────────────────────────────────────────────────
+async function handleNotes(req, res, auth) {
+  if (req.method === 'GET') {
+    try {
+      const { rows } = await sql`
+        SELECT * FROM official_notes 
+        ORDER BY created_at DESC
+      `;
+      return jsonResponse(res, 200, { notes: rows });
+    } catch (err) {
+      return jsonResponse(res, 500, { error: err.message });
+    }
+  }
+
+  if (req.method === 'POST') {
+    if (auth.role !== 'admin') return jsonResponse(res, 403, { error: 'Solo admin' });
+    
+    try {
+      const b = req.body;
+      const { rows } = await sql`
+        INSERT INTO official_notes (
+          type, recipient_name, recipient_org, subject, body,
+          school_name, director_name, school_address, status, created_by
+        ) VALUES (
+          ${b.type}, ${b.recipient_name || null}, ${b.recipient_org || null}, ${b.subject || null}, ${b.body || null},
+          ${b.school_name || null}, ${b.director_name || null}, ${b.school_address || null}, 'borrador', ${auth.userId}
+        ) RETURNING *
+      `;
+      return jsonResponse(res, 201, { note: rows[0] });
+    } catch (err) {
+      return jsonResponse(res, 500, { error: err.message });
+    }
+  }
+
+  return jsonResponse(res, 404, { error: 'Not found' });
+}
+
 // ── ROUTER ───────────────────────────────────────────────────────────────────
 export default async function handler(req, res) {
   handleCors(res);
   if (req.method === 'OPTIONS') return res.status(200).end();
 
-  const resource = req.query._resource;
+  const resource = req.query._resource || req.query.action;
   if (resource === 'dashboard') return handleDashboard(req, res);
   if (resource === 'init')      return handleInit(req, res);
+  if (resource === 'notes')     return handleNotes(req, res, req.user || verifyToken(req));
 
   return jsonResponse(res, 400, { error: 'Recurso no reconocido' });
 }

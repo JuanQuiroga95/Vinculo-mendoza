@@ -42,7 +42,7 @@ export default function Login() {
               <span style={{ color: 'var(--gold)', fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.2rem' }}>V</span>
             </div>
             <span style={{ fontFamily: 'var(--font-display)', fontSize: '1.4rem', fontWeight: 600, color: 'var(--cream)' }}>
-              Vínculo <span style={{ color: 'var(--gold)' }}>Mendoza</span>
+              Vínculo <span style={{ color: 'var(--gold)' }}>Pasantías</span>
             </span>
           </Link>
           <p style={{ color: 'var(--smoke)', fontSize: '0.9rem', marginTop: 8 }}>Ingresá a tu cuenta</p>

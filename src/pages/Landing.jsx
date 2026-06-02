@@ -26,14 +26,9 @@ export default function Landing() {
         borderBottom: '1px solid rgba(250,245,237,0.06)'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <div style={{
-            width: 36, height: 36, background: 'var(--wine)',
-            borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center'
-          }}>
-            <span style={{ color: 'var(--gold)', fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.1rem' }}>V</span>
-          </div>
-          <span style={{ fontFamily: 'var(--font-display)', fontSize: '1.3rem', fontWeight: 600 }}>
-            Vínculo <span style={{ color: 'var(--gold)' }}>Mendoza</span>
+          <span style={{ fontSize: '1.25rem', fontWeight: 700, fontFamily: 'var(--font-display)', color: 'var(--cream)', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{ width: 32, height: 32, borderRadius: 8, background: 'var(--gold)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--bg)', fontSize: '1.1rem' }}>V</div>
+            Vínculo <span style={{ color: 'var(--gold)' }}>Pasantías</span>
           </span>
         </div>
         <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
@@ -70,9 +65,9 @@ export default function Landing() {
 
         <div className="container" style={{ position: 'relative', zIndex: 1 }}>
           <div style={{ maxWidth: 780, animation: 'fadeUp 0.8s ease forwards' }}>
-            <div className="badge badge-wine" style={{ marginBottom: 24 }}>
-              <Star size={12} /> Primera super-app de empleabilidad juvenil de Mendoza
-            </div>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'rgba(255,184,0,0.1)', color: 'var(--gold)', padding: '6px 14px', borderRadius: 20, fontSize: '0.85rem', fontWeight: 600, marginBottom: 20 }}>
+              <Star size={12} /> Primera super-app de empleabilidad juvenil
+            </span>
 
             <h1 style={{ marginBottom: 24, color: 'var(--cream)' }}>
               El puente entre<br />
@@ -83,7 +78,7 @@ export default function Landing() {
             </h1>
 
             <p style={{ fontSize: '1.15rem', maxWidth: 560, marginBottom: 40, color: 'var(--muted)' }}>
-              Conectamos estudiantes de escuelas mendocinas con empresas reales.
+              Conectamos estudiantes de escuelas secundarias con empresas reales.
               Sin burocracia, con respaldo legal completo y una experiencia que transforma
               el último año del secundario.
             </p>
@@ -237,9 +232,9 @@ export default function Landing() {
         borderTop: '1px solid rgba(124,29,47,0.3)', borderBottom: '1px solid rgba(124,29,47,0.3)'
       }}>
         <div className="container" style={{ textAlign: 'center' }}>
-          <h2 style={{ marginBottom: 16 }}>¿Listo para conectar?</h2>
-          <p style={{ maxWidth: 480, margin: '0 auto 40px', fontSize: '1.05rem' }}>
-            Mendoza necesita este puente. Empezá hoy — es gratuito.
+          <h2 style={{ fontSize: '2.5rem', fontFamily: 'var(--font-display)', color: 'var(--cream)', marginBottom: 16 }}>¿Listo para dar el primer paso?</h2>
+          <p style={{ fontSize: '1.1rem', color: 'var(--smoke)', maxWidth: 600, margin: '0 auto 32px' }}>
+            Necesitamos este puente. Empezá hoy — es gratuito.
           </p>
           <button className="btn btn-gold btn-lg" onClick={() => navigate('/registro')}>
             Crear cuenta gratis <ArrowRight size={18} />
@@ -248,20 +243,19 @@ export default function Landing() {
       </section>
 
       {/* ── FOOTER ── */}
-      <footer style={{
-        padding: '32px 48px', borderTop: '1px solid rgba(250,245,237,0.06)',
-        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-        flexWrap: 'wrap', gap: 16
-      }}>
-        <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.1rem' }}>
-          Vínculo <span style={{ color: 'var(--gold)' }}>Mendoza</span>
-        </div>
-        <p style={{ fontSize: '0.8rem', color: 'var(--smoke)' }}>
-          © 2025 Vínculo Mendoza · Plataforma Integral de Vinculación Educativo-Productiva
-        </p>
-        <div style={{ display: 'flex', gap: 24, fontSize: '0.85rem', color: 'var(--smoke)' }}>
-          <Link to="/login" style={{ color: 'var(--smoke)' }}>Ingresar</Link>
-          <Link to="/registro" style={{ color: 'var(--gold)' }}>Registrarse</Link>
+      <footer style={{ padding: '32px 48px', borderTop: '1px solid rgba(250,245,237,0.06)' }}>
+        <div style={{ maxWidth: 1200, margin: '0 auto', display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: 20 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '1.2rem', fontWeight: 700, fontFamily: 'var(--font-display)', color: 'var(--cream)' }}>
+            <div style={{ width: 28, height: 28, borderRadius: 6, background: 'var(--gold)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--bg)', fontSize: '1rem' }}>V</div>
+            Vínculo <span style={{ color: 'var(--gold)' }}>Pasantías</span>
+          </div>
+          <div style={{ color: 'var(--smoke)', fontSize: '0.9rem' }}>
+            © 2025 Vínculo Pasantías · Plataforma Integral de Vinculación Educativo-Productiva
+          </div>
+          <div style={{ display: 'flex', gap: 24, fontSize: '0.85rem', color: 'var(--smoke)' }}>
+            <Link to="/login" style={{ color: 'var(--smoke)' }}>Ingresar</Link>
+            <Link to="/registro" style={{ color: 'var(--gold)' }}>Registrarse</Link>
+          </div>
         </div>
       </footer>
     </div>

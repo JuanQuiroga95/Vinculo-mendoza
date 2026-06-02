@@ -1,7 +1,7 @@
 // api/_lib/auth.js
 import jwt from 'jsonwebtoken';
 
-const SECRET = process.env.JWT_SECRET || 'vinculo-mendoza-secret-2025';
+const SECRET = process.env.JWT_SECRET || 'vinculo-pasantias-secret-2025';
 
 export function signToken(payload) {
   return jwt.sign(payload, SECRET, { expiresIn: '7d' });
