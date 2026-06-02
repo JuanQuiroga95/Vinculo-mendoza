@@ -12,28 +12,49 @@ async function handleList(req, res, auth) {
   const { type } = req.query // students | teachers | companies
 
   if (type === 'students') {
-    const { rows } = await sql`
-      SELECT s.*, u.email, u.role,
-        t.full_name AS teacher_name,
-        p.id AS pasantia_id, p.status AS pasantia_status,
-        c.company_name,
-        COALESCE(SUM(att.hours_worked),0)::DECIMAL(6,1) AS total_hours,
-        COUNT(DISTINCT v.id) AS visit_count,
-        EXISTS(SELECT 1 FROM ice_status i WHERE i.student_id=s.id AND i.is_blocked) AS ice
-      FROM students s
-      JOIN users u ON u.id = s.user_id
-      LEFT JOIN pasantias p ON p.student_id = s.id AND p.status IN ('active','simulation','blocked')
-      LEFT JOIN teachers t ON t.id = p.teacher_id
-      LEFT JOIN companies c ON c.id = p.company_id
-      LEFT JOIN attendance att ON att.pasantia_id = p.id
-      LEFT JOIN visit_logs v ON v.pasantia_id = p.id
-      ${auth.role === 'teacher'
-        ? sql`WHERE t.user_id = ${auth.userId}`
-        : sql``
-      }
-      GROUP BY s.id, u.email, u.role, t.full_name, p.id, p.status, c.company_name
-      ORDER BY s.full_name
-    `
+    let rows;
+    if (auth.role === 'teacher') {
+      const result = await sql`
+        SELECT s.*, u.email, u.role,
+          t.full_name AS teacher_name,
+          p.id AS pasantia_id, p.status AS pasantia_status,
+          c.company_name,
+          COALESCE(SUM(att.hours_worked),0)::DECIMAL(6,1) AS total_hours,
+          COUNT(DISTINCT v.id) AS visit_count,
+          EXISTS(SELECT 1 FROM ice_status i WHERE i.student_id=s.id AND i.is_blocked) AS ice
+        FROM students s
+        JOIN users u ON u.id = s.user_id
+        LEFT JOIN pasantias p ON p.student_id = s.id AND p.status IN ('active','simulation','blocked')
+        LEFT JOIN teachers t ON t.id = p.teacher_id
+        LEFT JOIN companies c ON c.id = p.company_id
+        LEFT JOIN attendance att ON att.pasantia_id = p.id
+        LEFT JOIN visit_logs v ON v.pasantia_id = p.id
+        WHERE t.user_id = ${auth.userId}
+        GROUP BY s.id, u.email, u.role, t.full_name, p.id, p.status, c.company_name
+        ORDER BY s.full_name
+      `
+      rows = result.rows;
+    } else {
+      const result = await sql`
+        SELECT s.*, u.email, u.role,
+          t.full_name AS teacher_name,
+          p.id AS pasantia_id, p.status AS pasantia_status,
+          c.company_name,
+          COALESCE(SUM(att.hours_worked),0)::DECIMAL(6,1) AS total_hours,
+          COUNT(DISTINCT v.id) AS visit_count,
+          EXISTS(SELECT 1 FROM ice_status i WHERE i.student_id=s.id AND i.is_blocked) AS ice
+        FROM students s
+        JOIN users u ON u.id = s.user_id
+        LEFT JOIN pasantias p ON p.student_id = s.id AND p.status IN ('active','simulation','blocked')
+        LEFT JOIN teachers t ON t.id = p.teacher_id
+        LEFT JOIN companies c ON c.id = p.company_id
+        LEFT JOIN attendance att ON att.pasantia_id = p.id
+        LEFT JOIN visit_logs v ON v.pasantia_id = p.id
+        GROUP BY s.id, u.email, u.role, t.full_name, p.id, p.status, c.company_name
+        ORDER BY s.full_name
+      `
+      rows = result.rows;
+    }
     return res.json({ students: rows })
   }
 
