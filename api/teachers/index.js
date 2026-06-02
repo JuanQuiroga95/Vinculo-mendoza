@@ -52,25 +52,39 @@ async function handleValidations(req, res, auth) {
 async function handleVisits(req, res, auth) {
   if (auth.role !== 'teacher') return res.status(403).json({ error: 'Solo docentes' });
 
-  const teacherRows = await sql`SELECT id FROM teachers WHERE user_id = ${auth.userId}`;
-  if (!teacherRows.rows?.length && !teacherRows.length) {
-    return res.status(404).json({ error: 'Perfil docente no encontrado' });
+  const teacherRes = await sql`SELECT id FROM teachers WHERE user_id = ${auth.userId}`;
+  if (!teacherRes.rows || !teacherRes.rows.length) {
+    return jsonResponse(res, 404, { error: 'Perfil docente no encontrado' });
   }
-  const teacherId = (teacherRows.rows || teacherRows)[0].id;
+  const teacherId = teacherRes.rows[0].id;
 
   if (req.method === 'GET') {
     const { pasantia_id } = req.query;
-    const where = pasantia_id ? sql`AND v.pasantia_id = ${pasantia_id}` : sql``;
-    const rows = await sql`
-      SELECT v.*, s.full_name AS student_name,
-        COUNT(*) OVER (PARTITION BY v.pasantia_id) AS visit_count_for_pasantia
-      FROM visit_logs v
-      JOIN pasantias p ON p.id = v.pasantia_id
-      JOIN students s ON s.id = p.student_id
-      WHERE v.teacher_id = ${teacherId} ${where}
-      ORDER BY v.visit_date DESC
-    `;
-    return res.json({ visits: rows });
+    let rows;
+    if (pasantia_id) {
+      const resData = await sql`
+        SELECT v.*, s.full_name AS student_name,
+          COUNT(*) OVER (PARTITION BY v.pasantia_id) AS visit_count_for_pasantia
+        FROM visit_logs v
+        JOIN pasantias p ON p.id = v.pasantia_id
+        JOIN students s ON s.id = p.student_id
+        WHERE v.teacher_id = ${teacherId} AND v.pasantia_id = ${pasantia_id}
+        ORDER BY v.visit_date DESC
+      `;
+      rows = resData.rows;
+    } else {
+      const resData = await sql`
+        SELECT v.*, s.full_name AS student_name,
+          COUNT(*) OVER (PARTITION BY v.pasantia_id) AS visit_count_for_pasantia
+        FROM visit_logs v
+        JOIN pasantias p ON p.id = v.pasantia_id
+        JOIN students s ON s.id = p.student_id
+        WHERE v.teacher_id = ${teacherId}
+        ORDER BY v.visit_date DESC
+      `;
+      rows = resData.rows;
+    }
+    return jsonResponse(res, 200, { visits: rows });
   }
 
   if (req.method === 'POST') {
@@ -87,10 +101,12 @@ async function handleVisits(req, res, auth) {
       return res.status(400).json({ error: 'Todos los aspectos deben tener valor 1, 2 o 3' });
     }
 
-    const [countRow] = await sql`
+    const countRes = await sql`
       SELECT COUNT(*)+1 AS next_num FROM visit_logs WHERE pasantia_id = ${pasantia_id}
     `;
-    const [visit] = await sql`
+    const countRow = countRes.rows[0] || { next_num: 1 };
+    
+    const visitRes = await sql`
       INSERT INTO visit_logs (
         pasantia_id, teacher_id, visit_date, visit_number,
         asp_puntualidad, asp_uniforme, asp_actitud, asp_comunicacion,
@@ -103,7 +119,7 @@ async function handleVisits(req, res, auth) {
         ${observations}, 'Firma docente', NOW(), true
       ) RETURNING *
     `;
-    return res.status(201).json({ visit, gem_logged: true });
+    return jsonResponse(res, 201, { visit: visitRes.rows[0], gem_logged: true });
   }
 
   return res.status(405).json({ error: 'Método no permitido' });
