@@ -1364,6 +1364,10 @@ export default function AdminDashboard() {
               ))}
             </div>
             <div style={{ animation: 'fadeUp 0.35s ease' }}>
+              {tab === 'setup'      && <SetupWizard />}
+              {tab === 'agreements' && <AgreementsTab students={students} teachers={teachers} companies={companies} />}
+              {tab === 'calendar'   && <CalendarTab />}
+              {tab === 'notes'      && <OfficialNotesTab />}
               {tab === 'abm'        && <ABMTab />}
               {tab === 'monitor'    && <MonitorTab students={students} teachers={teachers} />}
               {tab === 'ice'        && <IceTab students={students} iceMap={iceMap} onToggleIce={toggleIce} />}
