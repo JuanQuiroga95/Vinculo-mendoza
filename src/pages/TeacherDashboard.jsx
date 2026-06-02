@@ -530,13 +530,7 @@ export default function TeacherDashboard() {
     } catch { setStudents([]) }
     try {
       const data = await fetch('/api/teachers/visits', { headers: authHeader() }).then(r => r.json())
-      const map = {}
-      ;(data.visits || []).forEach(v => {
-        if (!map[v.pasantia_id]) map[v.pasantia_id] = { id: v.pasantia_id, student_name: v.student_name, company_name: v.company_name, visits: [], visit_count: 0 }
-        map[v.pasantia_id].visits.push(v)
-        map[v.pasantia_id].visit_count = map[v.pasantia_id].visits.length
-      })
-      setPasantias(Object.values(map))
+      setPasantias(data.pasantias || [])
     } catch { setPasantias([]) }
     setLoading(false)
   }
@@ -659,7 +653,7 @@ export default function TeacherDashboard() {
           </div>
         )}
 
-        {tab === 'checklist' && <TeacherChecklistTab pasantiaId="demo-id" />}
+        {tab === 'checklist' && <TeacherChecklistTab pasantias={pasantias} />}
 
         {tab === 'alumnos' && (
           <div style={{ animation: 'fadeUp 0.4s ease' }}>

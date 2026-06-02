@@ -60,7 +60,6 @@ async function handleVisits(req, res, auth) {
 
   if (req.method === 'GET') {
     const { pasantia_id } = req.query;
-    let rows;
     if (pasantia_id) {
       const resData = await sql`
         SELECT v.*, s.full_name AS student_name,
@@ -71,20 +70,20 @@ async function handleVisits(req, res, auth) {
         WHERE v.teacher_id = ${teacherId} AND v.pasantia_id = ${pasantia_id}
         ORDER BY v.visit_date DESC
       `;
-      rows = resData.rows;
+      return jsonResponse(res, 200, { visits: resData.rows });
     } else {
       const resData = await sql`
-        SELECT v.*, s.full_name AS student_name,
-          COUNT(*) OVER (PARTITION BY v.pasantia_id) AS visit_count_for_pasantia
-        FROM visit_logs v
-        JOIN pasantias p ON p.id = v.pasantia_id
+        SELECT p.id, s.full_name as student_name, c.company_name,
+               (SELECT COUNT(*) FROM visit_logs v WHERE v.pasantia_id = p.id) as visit_count,
+               fg.final_grade
+        FROM pasantias p
         JOIN students s ON s.id = p.student_id
-        WHERE v.teacher_id = ${teacherId}
-        ORDER BY v.visit_date DESC
+        LEFT JOIN companies c ON c.id = p.company_id
+        LEFT JOIN final_grades fg ON fg.pasantia_id = p.id
+        WHERE p.teacher_id = ${teacherId}
       `;
-      rows = resData.rows;
+      return jsonResponse(res, 200, { pasantias: resData.rows });
     }
-    return jsonResponse(res, 200, { visits: rows });
   }
 
   if (req.method === 'POST') {
