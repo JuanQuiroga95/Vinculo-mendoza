@@ -9,6 +9,7 @@ import {
 } from 'lucide-react'
 import { clearAuth, getToken } from '../utils/auth'
 import { useNavigate } from 'react-router-dom'
+import { AgreementsTab, CalendarTab, OfficialNotesTab, SetupWizard } from '../components/PasantiasModules'
 
 // ─── API ──────────────────────────────────────────────────────────────────────
 function authHeaders() {
@@ -145,7 +146,11 @@ function Field({ label, value, onChange, type = 'text' }) {
 
 // ─── TABS ─────────────────────────────────────────────────────────────────────
 const TABS = [
+  { id: 'setup',      label: 'Puesta en marcha',icon: CheckCircle },
   { id: 'monitor',    label: 'Monitor Global', icon: BarChart3 },
+  { id: 'agreements', label: 'Convenios',      icon: FileText },
+  { id: 'calendar',   label: 'Calendario',     icon: Calendar },
+  { id: 'notes',      label: 'Notas Oficiales',icon: Mail },
   { id: 'ice',        label: 'Control ICE',    icon: Lock },
   { id: 'siniestros', label: 'Siniestros',     icon: AlertTriangle },
   { id: 'abm',        label: 'Usuarios',       icon: UserPlus },

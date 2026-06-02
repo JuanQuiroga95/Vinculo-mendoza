@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
 import Sidebar from '../components/Sidebar'
 import { getProfile, vacancyAPI, applicationAPI, STATUS_LABELS, STATUS_BADGE } from '../utils/auth'
-import { LayoutDashboard, Briefcase, Users, Plus, X, Clock, MapPin, ChevronDown, Star, Check, UserX } from 'lucide-react'
+import { LayoutDashboard, Briefcase, Users, Plus, X, Clock, MapPin, ChevronDown, Star, Check, UserX, FileText } from 'lucide-react'
+import { CompanyEvaluationForm } from '../components/PasantiasModules'
 
 const STATUS_NEXT = { pending: 'reviewed', reviewed: 'interview', interview: 'accepted' }
 const STATUS_BTN_LABEL = { pending: 'Marcar revisado', reviewed: 'Llamar a entrevista', interview: 'Aceptar pasante' }
@@ -60,6 +61,7 @@ export default function CompanyDashboard() {
     { id: 'inicio', label: 'Inicio', icon: <LayoutDashboard size={16} /> },
     { id: 'vacantes', label: 'Mis vacantes', icon: <Briefcase size={16} />, count: vacancies.length },
     { id: 'postulantes', label: 'Postulantes', icon: <Users size={16} />, count: counts.pending },
+    { id: 'evaluations', label: 'Evaluaciones', icon: <Star size={16} /> },
   ]
 
   return (
@@ -239,6 +241,8 @@ export default function CompanyDashboard() {
             </div>
           </div>
         )}
+
+        {tab === 'evaluations' && <CompanyEvaluationForm companyId={profile?.id} />}
       </main>
 
       {/* ── MODAL: New vacancy ── */}

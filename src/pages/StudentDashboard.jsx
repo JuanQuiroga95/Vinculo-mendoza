@@ -13,8 +13,9 @@ import {
   LayoutDashboard, Search, FolderOpen, BookOpen, Briefcase,
   ChevronRight, Plus, X, Clock, MapPin, FileText, Upload,
   CheckCircle, AlertTriangle, Timer, TrendingUp, Folder,
-  LogIn, LogOut as LogOutIcon, Star
+  LogIn, LogOut as LogOutIcon, Star, PenTool
 } from 'lucide-react'
+import { AuthorizationForm, SelfEvaluationTab } from '../components/PasantiasModules'
 
 const BASE = '/api'
 function authHeaders() {
@@ -211,6 +212,8 @@ export default function StudentDashboard() {
     { id: 'vacantes',      label: 'Pasantías',          icon: <Search size={16} />, count: vacancies.length },
     { id: 'postulaciones', label: 'Mis postulaciones',  icon: <Briefcase size={16} />, count: pendingApps },
     { id: 'asistencia',    label: 'Asistencia',         icon: <Timer size={16} /> },
+    { id: 'auth',          label: 'Autorizaciones',     icon: <CheckCircle size={16} /> },
+    { id: 'self_eval',     label: 'Autoevaluación',     icon: <PenTool size={16} /> },
     { id: 'portafolio',    label: 'Mi portafolio',      icon: <FolderOpen size={16} />, count: portfolio.length },
     { id: 'bitacora',      label: 'Bitácora',           icon: <BookOpen size={16} />, count: logbook.length },
     { id: 'informe',       label: 'Informe final',      icon: <FileText size={16} /> },
@@ -355,33 +358,13 @@ export default function StudentDashboard() {
                     </div>
                   ))}
                 </div>
-                <h3 style={{ marginBottom:12, color:'var(--cream)', fontSize:'1rem' }}>Historial de asistencias</h3>
-                {attendance.entries.length === 0 ? (
-                  <div style={{ textAlign:'center', padding:40, background:'var(--bg-card)', borderRadius:'var(--r-lg)', border:'1px solid rgba(255,255,255,0.06)' }}>
-                    <p>No hay registros aún. Empezá registrando tu primera jornada.</p>
-                  </div>
-                ) : (
-                  <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
-                    {attendance.entries.map((e,i) => (
-                      <div key={e.id||i} style={{ background:'var(--bg-card)', borderRadius:'var(--r-md)', border:'1px solid rgba(255,255,255,0.07)', padding:'12px 16px', display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:10 }}>
-                        <div>
-                          <div style={{ fontWeight:600, color:'var(--cream)', fontSize:'0.9rem' }}>{e.entry_date}</div>
-                          <div style={{ fontSize:'0.78rem', color:'var(--smoke)', marginTop:2, display:'flex', alignItems:'center', gap:6 }}>
-                            <LogIn size={12}/> {e.clock_in} <span style={{ opacity:0.4 }}>→</span> <LogOutIcon size={12}/> {e.clock_out||'—'}
-                          </div>
-                        </div>
-                        <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-                          {e.hours_worked && <span style={{ fontFamily:'var(--font-display)', fontSize:'1.2rem', color:'var(--gold)', fontWeight:700 }}>{parseFloat(e.hours_worked).toFixed(1)}h</span>}
-                          {e.verified_by_instructor && <span className="badge badge-teal">Verificado</span>}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
               </>
             )}
           </div>
         )}
+
+        {tab === 'auth' && <AuthorizationForm pasantia={pasantias[0]} profile={profile} onSave={() => {}} />}
+        {tab === 'self_eval' && <SelfEvaluationTab pasantiaId={pasantias[0]?.id || 'demo-id'} />}
 
         {/* PORTAFOLIO */}
         {tab === 'portafolio' && (

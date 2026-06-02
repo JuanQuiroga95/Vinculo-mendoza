@@ -6,8 +6,9 @@ import { getProfile } from '../utils/auth'
 import {
   LayoutDashboard, Users, Star, ClipboardList,
   Plus, X, Check, Search, ChevronDown, ChevronUp,
-  AlertTriangle, CheckCircle, Lock, FileText,
+  AlertTriangle, CheckCircle, Lock, FileText, ListTodo
 } from 'lucide-react'
+import { TeacherChecklistTab } from '../components/PasantiasModules'
 
 // ─── Constantes ────────────────────────────────────────────────────────────
 
@@ -552,13 +553,15 @@ export default function TeacherDashboard() {
   const alertPasantias = pasantias.filter(p => (p.visit_count || 0) < 2)
   const readyToGrade   = pasantias.filter(p => (p.visit_count || 0) >= 2)
   const totalVisits    = pasantias.reduce((s, p) => s + (p.visit_count || 0), 0)
+  const pendingRubrics = pasantias.filter(p => (p.visit_count || 0) >= 2 && !p.final_grade).length
 
   const navItems = [
-    { id: 'inicio',  label: 'Panel general',    icon: <LayoutDashboard size={16} /> },
-    { id: 'visitas', label: 'Registrar visitas', icon: <ClipboardList size={16} />, count: alertPasantias.length },
-    { id: 'rubrica', label: 'Evaluar (rúbrica)', icon: <Star size={16} />, count: readyToGrade.length },
-    { id: 'gem',     label: 'Registro GEM',      icon: <FileText size={16} /> },
-    { id: 'alumnos', label: 'Mis alumnos',       icon: <Users size={16} />, count: students.length },
+    { id: 'inicio',  label: 'Inicio',      icon: <LayoutDashboard size={16} /> },
+    { id: 'visitas', label: 'Visitas',     icon: <ClipboardList size={16} /> },
+    { id: 'rubrica', label: 'Rúbricas',    icon: <Star size={16} />, count: pendingRubrics },
+    { id: 'gem',     label: 'Notas GEM',   icon: <FileText size={16} /> },
+    { id: 'checklist', label: 'Checklist', icon: <ListTodo size={16} /> },
+    { id: 'alumnos', label: 'Mis Alumnos', icon: <Users size={16} />, count: students.length },
   ]
 
   return (
@@ -655,6 +658,8 @@ export default function TeacherDashboard() {
             <GemTab pasantias={pasantias} />
           </div>
         )}
+
+        {tab === 'checklist' && <TeacherChecklistTab pasantiaId="demo-id" />}
 
         {tab === 'alumnos' && (
           <div style={{ animation: 'fadeUp 0.4s ease' }}>
