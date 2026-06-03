@@ -10,12 +10,26 @@ function requireAdmin(req, res) {
   return user;
 }
 
+function requireAdminOrPreceptor(req, res) {
+  const user = verifyToken(req);
+  if (!user) { res.status(401).json({ error: 'No autorizado' }); return null; }
+  if (!['admin', 'preceptor'].includes(user.role)) { res.status(403).json({ error: 'Solo Admin o Preceptor' }); return null; }
+  return user;
+}
+
 // ── DASHBOARD ────────────────────────────────────────────────────────────────
 async function handleDashboard(req, res) {
-  const user = requireAdmin(req, res);
-  if (!user) return;
-
+  // ICE, siniestros y listado de alumnos: admin o preceptor
   const { action } = req.query;
+  const iceActions = ['toggle_ice', 'get_accidents', 'add_accident', 'mark_sent', 'get_students_preceptor'];
+  
+  let user;
+  if (iceActions.includes(action)) {
+    user = requireAdminOrPreceptor(req, res);
+  } else {
+    user = requireAdmin(req, res);
+  }
+  if (!user) return;
 
   if (req.method === 'GET' && action === 'overview') {
     const [totals] = await sql`
@@ -95,6 +109,35 @@ async function handleDashboard(req, res) {
       await sql`UPDATE pasantias SET status='active' WHERE student_id=${student_id} AND status='blocked'`;
     }
     return res.json({ success: true });
+  }
+
+  // Listado de alumnos para el preceptor (con estado ICE y datos de pasantía)
+  if (req.method === 'GET' && action === 'get_students_preceptor') {
+    const rows = await sql`
+      SELECT s.id, s.full_name, s.school, s.grade, s.orientation,
+        u.email,
+        p.id AS pasantia_id, p.status AS pasantia_status,
+        c.company_name,
+        t.full_name AS teacher_name,
+        COALESCE(SUM(att.hours_worked),0)::DECIMAL(6,1) AS total_hours,
+        COUNT(DISTINCT v.id) AS visit_count,
+        ice.is_blocked AS ice,
+        ice.reason AS ice_reason,
+        ice.set_at AS ice_set_at
+      FROM students s
+      JOIN users u ON u.id = s.user_id
+      LEFT JOIN pasantias p ON p.student_id = s.id AND p.status IN ('active','simulation','blocked')
+      LEFT JOIN companies c ON c.id = p.company_id
+      LEFT JOIN teachers t ON t.id = p.teacher_id
+      LEFT JOIN attendance att ON att.pasantia_id = p.id
+      LEFT JOIN visit_logs v ON v.pasantia_id = p.id
+      LEFT JOIN ice_status ice ON ice.student_id = s.id
+      GROUP BY s.id, s.full_name, s.school, s.grade, s.orientation,
+               u.email, p.id, p.status, c.company_name, t.full_name,
+               ice.is_blocked, ice.reason, ice.set_at
+      ORDER BY s.full_name
+    `;
+    return res.json({ students: rows });
   }
 
   if (req.method === 'GET' && action === 'get_accidents') {
@@ -396,6 +439,15 @@ async function handleInit(req, res) {
       VALUES ('videla4012', ${adminHash}, 'admin')
       ON CONFLICT (email) DO UPDATE SET password_hash = ${adminHash}`;
     log.push('✅ Admin: videla4012 / VinculoVid26');
+
+    // ── USUARIO PRECEPTOR DEMO ──────────────────────────────────────────────
+    const preceptorHash = await bcrypt.hash('VinculoVid26', 12);
+    await sql`
+      INSERT INTO users (email, password_hash, role)
+      VALUES ('preceptor4012', ${preceptorHash}, 'preceptor')
+      ON CONFLICT (email) DO UPDATE SET password_hash = ${preceptorHash}`;
+    log.push('✅ Preceptor: preceptor4012 / VinculoVid26');
+
 
     return jsonResponse(res, 200, {
       ok: true,

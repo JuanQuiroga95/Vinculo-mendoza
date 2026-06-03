@@ -88,7 +88,18 @@ async function handleList(req, res, auth) {
     return res.json({ companies: rows })
   }
 
-  return res.status(400).json({ error: 'type requerido: students | teachers | companies' })
+  if (type === 'preceptors') {
+    if (auth.role !== 'admin') return res.status(403).json({ error: 'Solo admin' })
+    const { rows } = await sql`
+      SELECT u.id, u.email, u.role, u.created_at
+      FROM users u
+      WHERE u.role = 'preceptor'
+      ORDER BY u.created_at DESC
+    `
+    return res.json({ preceptors: rows })
+  }
+
+  return res.status(400).json({ error: 'type requerido: students | teachers | companies | preceptors' })
 }
 
 // ── CREAR ─────────────────────────────────────────────────────────────────────
@@ -163,6 +174,16 @@ async function handleCreate(req, res, auth) {
     return res.status(201).json({ ok: true, user_id: u.id, company_id: c.id, generated_password: password ? null : pass })
   }
 
+  if (type === 'preceptor') {
+    if (auth.role !== 'admin') return res.status(403).json({ error: 'Solo admin puede crear preceptores' })
+    if (!email || !full_name) return res.status(400).json({ error: 'email y full_name requeridos' })
+    const { rows: [u] } = await sql`
+      INSERT INTO users (email, password_hash, role)
+      VALUES (${email.toLowerCase()}, ${hash}, 'preceptor')
+      ON CONFLICT (email) DO UPDATE SET password_hash = ${hash} RETURNING id`
+    return res.status(201).json({ ok: true, user_id: u.id, generated_password: password ? null : pass })
+  }
+
   return res.status(400).json({ error: 'type inválido' })
 }
 
@@ -183,7 +204,7 @@ export default async function handler(req, res) {
 
   const auth = requireAuth(req, res)
   if (!auth) return
-  if (!['admin', 'teacher'].includes(auth.role)) return res.status(403).json({ error: 'Sin permisos' })
+  if (!['admin', 'teacher', 'preceptor'].includes(auth.role)) return res.status(403).json({ error: 'Sin permisos' })
 
   if (req.method === 'GET')    return handleList(req, res, auth)
   if (req.method === 'POST')   return handleCreate(req, res, auth)

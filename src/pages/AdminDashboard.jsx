@@ -185,7 +185,7 @@ function ABMTab() {
     setLoading(true)
     try {
       const data = await fetch(`/api/admin/users?type=${section}`, { headers: authHeaders() }).then(r => r.json())
-      setList(data.students || data.teachers || data.companies || [])
+      setList(data.students || data.teachers || data.companies || data.preceptors || [])
     } catch { setList([]) }
     finally { setLoading(false) }
   }
@@ -195,7 +195,7 @@ function ABMTab() {
     try {
       const res = await fetch('/api/admin/users', {
         method: 'POST', headers: authHeaders(),
-        body: JSON.stringify({ type: section === 'students' ? 'student' : section === 'teachers' ? 'teacher' : 'company', ...form })
+        body: JSON.stringify({ type: section === 'students' ? 'student' : section === 'teachers' ? 'teacher' : section === 'preceptors' ? 'preceptor' : 'company', ...form })
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
@@ -219,9 +219,10 @@ function ABMTab() {
   }
 
   const sectionConfig = {
-    students:  { label: 'Alumnos',  addLabel: 'Nuevo alumno',  icon: Users },
-    teachers:  { label: 'Docentes', addLabel: 'Nuevo docente', icon: Users },
-    companies: { label: 'Empresas', addLabel: 'Nueva empresa', icon: Building2 },
+    students:   { label: 'Alumnos',     addLabel: 'Nuevo alumno',     icon: Users },
+    teachers:   { label: 'Docentes',    addLabel: 'Nuevo docente',    icon: Users },
+    companies:  { label: 'Empresas',    addLabel: 'Nueva empresa',    icon: Building2 },
+    preceptors: { label: 'Preceptores', addLabel: 'Nuevo preceptor',  icon: ShieldCheck },
   }
 
   const FIELDS = {
@@ -248,6 +249,11 @@ function ABMTab() {
       { key: 'sector',        label: 'Sector',          placeholder: 'Comercio' },
       { key: 'contact_name',  label: 'Referente',       placeholder: 'Víctor Silvestrini' },
       { key: 'location',      label: 'Localidad',       placeholder: 'Luján de Cuyo' },
+    ],
+    preceptors: [
+      { key: 'full_name', label: 'Apellido y Nombre *', placeholder: 'LOPEZ, Andrea' },
+      { key: 'email',     label: 'Email (usuario) *',   placeholder: 'alopez@escola.edu.ar' },
+      { key: 'password',  label: 'Contraseña (vacío = auto)', placeholder: 'Dejar vacío para generar' },
     ],
   }
 
@@ -289,6 +295,9 @@ function ABMTab() {
                       <th key={h} style={{ padding: '12px 14px', textAlign: 'left', color: 'var(--smoke)', fontWeight: 600, whiteSpace: 'nowrap' }}>{h}</th>
                     ))}
                     {section === 'companies' && ['Empresa', 'Email', 'CUIT', 'Sector', 'Referente', 'Alumnos', 'Verificada', ''].map(h => (
+                      <th key={h} style={{ padding: '12px 14px', textAlign: 'left', color: 'var(--smoke)', fontWeight: 600, whiteSpace: 'nowrap' }}>{h}</th>
+                    ))}
+                    {section === 'preceptors' && ['Preceptor', 'Email', 'Fecha creación', ''].map(h => (
                       <th key={h} style={{ padding: '12px 14px', textAlign: 'left', color: 'var(--smoke)', fontWeight: 600, whiteSpace: 'nowrap' }}>{h}</th>
                     ))}
                   </tr>
@@ -342,6 +351,19 @@ function ABMTab() {
                       <td style={{ padding: '10px 14px' }}>{c.verified ? <span style={{ color: '#4ade80', fontSize: '0.8rem' }}>✅</span> : <span style={{ color: '#f59e0b', fontSize: '0.8rem' }}>⏳</span>}</td>
                       <td style={{ padding: '10px 14px' }}>
                         <button onClick={() => { setDeleteTarget({ user_id: c.user_id, name: c.company_name }); setModal('confirm_delete') }}
+                          style={{ background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.3)', borderRadius: 6, padding: '4px 10px', color: '#f87171', cursor: 'pointer', fontSize: '0.78rem' }}>
+                          Eliminar
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                  {section === 'preceptors' && list.map((p, i) => (
+                    <tr key={p.id} style={{ borderTop: '1px solid rgba(250,245,237,0.05)', background: i%2===0?'transparent':'rgba(250,245,237,0.02)' }}>
+                      <td style={{ padding: '10px 14px', color: 'var(--cream)', fontWeight: 500 }}>{p.email}</td>
+                      <td style={{ padding: '10px 14px', color: 'var(--smoke)', fontSize: '0.8rem' }}>{p.email}</td>
+                      <td style={{ padding: '10px 14px', color: 'var(--smoke)', fontSize: '0.8rem' }}>{p.created_at ? new Date(p.created_at).toLocaleDateString('es-AR') : '—'}</td>
+                      <td style={{ padding: '10px 14px' }}>
+                        <button onClick={() => { setDeleteTarget({ user_id: p.id, name: p.email }); setModal('confirm_delete') }}
                           style={{ background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.3)', borderRadius: 6, padding: '4px 10px', color: '#f87171', cursor: 'pointer', fontSize: '0.78rem' }}>
                           Eliminar
                         </button>

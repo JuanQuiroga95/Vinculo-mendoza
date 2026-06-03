@@ -7,6 +7,7 @@ import StudentDashboard from './pages/StudentDashboard'
 import CompanyDashboard from './pages/CompanyDashboard'
 import TeacherDashboard from './pages/TeacherDashboard'
 import AdminDashboard from './pages/AdminDashboard'
+import PreceptorDashboard from './pages/PreceptorDashboard'
 
 function ProtectedRoute({ children, role }) {
   if (!isLoggedIn()) return <Navigate to="/login" replace />
@@ -16,6 +17,7 @@ function ProtectedRoute({ children, role }) {
     if (user?.role === 'company')  return <Navigate to="/empresa" replace />
     if (user?.role === 'teacher')  return <Navigate to="/docente" replace />
     if (user?.role === 'admin')    return <Navigate to="/admin" replace />
+    if (user?.role === 'preceptor') return <Navigate to="/preceptor" replace />
   }
   return children
 }
@@ -27,6 +29,7 @@ function DashboardRedirect() {
   if (user.role === 'company')  return <Navigate to="/empresa" replace />
   if (user.role === 'teacher')  return <Navigate to="/docente" replace />
   if (user.role === 'admin')    return <Navigate to="/admin" replace />
+  if (user.role === 'preceptor') return <Navigate to="/preceptor" replace />
   return <Navigate to="/login" replace />
 }
 
@@ -50,6 +53,9 @@ export default function App() {
         } />
         <Route path="/admin" element={
           <ProtectedRoute role="admin"><AdminDashboard /></ProtectedRoute>
+        } />
+        <Route path="/preceptor" element={
+          <ProtectedRoute role="preceptor"><PreceptorDashboard /></ProtectedRoute>
         } />
 
         <Route path="*" element={<Navigate to="/" replace />} />

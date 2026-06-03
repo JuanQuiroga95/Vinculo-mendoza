@@ -132,6 +132,8 @@ export default async function handler(req, res) {
       profile = p[0] || null;
     } else if (user.role === 'admin') {
       profile = { full_name: 'Administrador', role: 'admin' };
+    } else if (user.role === 'preceptor') {
+      profile = { full_name: user.email, role: 'preceptor' };
     }
     const token = signToken({ userId: user.id, role: user.role, email: user.email });
     return jsonResponse(res, 200, { token, user: { id: user.id, email: user.email, role: user.role }, profile });
@@ -419,7 +421,7 @@ export default async function handler(req, res) {
 
     try {
       await q(`CREATE EXTENSION IF NOT EXISTS "uuid-ossp"`);
-      await q(`CREATE TABLE IF NOT EXISTS users (id UUID PRIMARY KEY DEFAULT uuid_generate_v4(), email VARCHAR(255) UNIQUE NOT NULL, password_hash VARCHAR(255) NOT NULL, role VARCHAR(20) NOT NULL CHECK (role IN ('student','company','teacher','admin')), school_id UUID, created_by UUID, created_at TIMESTAMPTZ DEFAULT NOW())`); log.push('✅ users');
+      await q(`CREATE TABLE IF NOT EXISTS users (id UUID PRIMARY KEY DEFAULT uuid_generate_v4(), email VARCHAR(255) UNIQUE NOT NULL, password_hash VARCHAR(255) NOT NULL, role VARCHAR(20) NOT NULL CHECK (role IN ('student','company','teacher','admin','preceptor')), school_id UUID, created_by UUID, created_at TIMESTAMPTZ DEFAULT NOW())`); log.push('✅ users');
       await q(`CREATE TABLE IF NOT EXISTS schools (id UUID PRIMARY KEY DEFAULT uuid_generate_v4(), name VARCHAR(255) NOT NULL, cue VARCHAR(20) UNIQUE, address VARCHAR(255), city VARCHAR(100), department VARCHAR(100), type VARCHAR(30) DEFAULT 'orientada', phone VARCHAR(30), email VARCHAR(255), website VARCHAR(255), logo_url VARCHAR(500), description TEXT, director_name VARCHAR(255), created_by UUID, created_at TIMESTAMPTZ DEFAULT NOW())`); log.push('✅ schools');
       await q(`CREATE TABLE IF NOT EXISTS students (id UUID PRIMARY KEY DEFAULT uuid_generate_v4(), user_id UUID REFERENCES users(id) ON DELETE CASCADE UNIQUE, full_name VARCHAR(255) NOT NULL, school VARCHAR(255), school_id UUID REFERENCES schools(id), orientation VARCHAR(100), grade VARCHAR(20), birth_date DATE, bio TEXT, interests TEXT[], avatar_url VARCHAR(500), phone VARCHAR(30), linkedin_url VARCHAR(255), location VARCHAR(100), created_by UUID REFERENCES users(id), created_at TIMESTAMPTZ DEFAULT NOW(), updated_at TIMESTAMPTZ DEFAULT NOW())`); log.push('✅ students');
       await q(`CREATE TABLE IF NOT EXISTS companies (id UUID PRIMARY KEY DEFAULT uuid_generate_v4(), user_id UUID REFERENCES users(id) ON DELETE CASCADE UNIQUE, company_name VARCHAR(255) NOT NULL, sector VARCHAR(100), description TEXT, location VARCHAR(100), address VARCHAR(255), department VARCHAR(100), website VARCHAR(255), phone VARCHAR(30), contact_name VARCHAR(255), verified BOOLEAN DEFAULT false, logo_url VARCHAR(500), created_at TIMESTAMPTZ DEFAULT NOW(), updated_at TIMESTAMPTZ DEFAULT NOW())`); log.push('✅ companies');
