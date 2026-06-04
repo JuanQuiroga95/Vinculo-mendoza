@@ -17,7 +17,8 @@ async function handleValidations(req, res, auth) {
         LEFT JOIN portfolio_items p ON p.student_id = s.id
         LEFT JOIN applications a ON a.student_id = s.id
         LEFT JOIN skill_validations sv ON sv.student_id = s.id AND sv.teacher_id = ${teacher[0].id}
-        WHERE s.school = ${teacher[0].school}
+        LEFT JOIN pasantias pas ON pas.student_id = s.id
+        WHERE s.school = ${teacher[0].school} OR pas.teacher_id = ${teacher[0].id}
         GROUP BY s.id
         ORDER BY s.full_name
       `;

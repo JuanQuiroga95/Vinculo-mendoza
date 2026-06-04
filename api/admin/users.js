@@ -120,16 +120,25 @@ async function handleCreate(req, res, auth) {
       INSERT INTO users (email, password_hash, role)
       VALUES (${emailFinal}, ${hash}, 'student')
       ON CONFLICT (email) DO UPDATE SET password_hash = ${hash} RETURNING id`
-    const { rows: [s] } = await sql`
-      INSERT INTO students (user_id, full_name, school, orientation, grade, location)
-      VALUES (${u.id}, ${full_name}, ${school||''}, ${orientation||''}, ${grade||''}, ${location||null})
-      ON CONFLICT (user_id) DO UPDATE SET full_name=${full_name}, school=${school||''}, orientation=${orientation||''}, grade=${grade||''}
-      RETURNING id`
 
     // Si viene teacher_id o el que crea es docente → crear pasantía asignada
-    const tId = teacher_id || (auth.role === 'teacher'
-      ? (await sql`SELECT id FROM teachers WHERE user_id=${auth.userId}`).rows[0]?.id
-      : null)
+    let tId = teacher_id;
+    let tSchool = null;
+    if (auth.role === 'teacher') {
+      const tRes = await sql`SELECT id, school FROM teachers WHERE user_id=${auth.userId}`;
+      if (tRes.rows[0]) {
+        tId = tId || tRes.rows[0].id;
+        tSchool = tRes.rows[0].school;
+      }
+    }
+
+    const finalSchool = school || tSchool || '';
+
+    const { rows: [s] } = await sql`
+      INSERT INTO students (user_id, full_name, school, orientation, grade, location)
+      VALUES (${u.id}, ${full_name}, ${finalSchool}, ${orientation||''}, ${grade||''}, ${location||null})
+      ON CONFLICT (user_id) DO UPDATE SET full_name=${full_name}, school=${finalSchool}, orientation=${orientation||''}, grade=${grade||''}
+      RETURNING id`
 
     if (tId) {
       const cId = company_id || null
