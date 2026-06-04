@@ -119,7 +119,7 @@ async function handleCreate(req, res, auth) {
     const { rows: [u] } = await sql`
       INSERT INTO users (email, password_hash, role)
       VALUES (${emailFinal}, ${hash}, 'student')
-      ON CONFLICT (email) DO UPDATE SET password_hash = ${hash} RETURNING id, (xmax=0) AS inserted`
+      ON CONFLICT (email) DO UPDATE SET password_hash = ${hash} RETURNING id`
     const { rows: [s] } = await sql`
       INSERT INTO students (user_id, full_name, school, orientation, grade, location)
       VALUES (${u.id}, ${full_name}, ${school||''}, ${orientation||''}, ${grade||''}, ${location||null})
@@ -199,16 +199,21 @@ async function handleDelete(req, res, auth) {
 
 // ── ROUTER ───────────────────────────────────────────────────────────────────
 export default async function handler(req, res) {
-  handleCors(res)
-  if (req.method === 'OPTIONS') return res.status(200).end()
+  try {
+    handleCors(res)
+    if (req.method === 'OPTIONS') return res.status(200).end()
 
-  const auth = requireAuth(req, res)
-  if (!auth) return
-  if (!['admin', 'teacher', 'preceptor'].includes(auth.role)) return res.status(403).json({ error: 'Sin permisos' })
+    const auth = requireAuth(req, res)
+    if (!auth) return
+    if (!['admin', 'teacher', 'preceptor'].includes(auth.role)) return res.status(403).json({ error: 'Sin permisos' })
 
-  if (req.method === 'GET')    return handleList(req, res, auth)
-  if (req.method === 'POST')   return handleCreate(req, res, auth)
-  if (req.method === 'DELETE') return handleDelete(req, res, auth)
+    if (req.method === 'GET')    return await handleList(req, res, auth)
+    if (req.method === 'POST')   return await handleCreate(req, res, auth)
+    if (req.method === 'DELETE') return await handleDelete(req, res, auth)
 
-  return res.status(405).json({ error: 'Método no permitido' })
+    return res.status(405).json({ error: 'Método no permitido' })
+  } catch (err) {
+    console.error('API Error:', err)
+    return res.status(500).json({ error: err.message || 'Error interno del servidor' })
+  }
 }
